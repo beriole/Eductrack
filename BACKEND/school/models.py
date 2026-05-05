@@ -757,3 +757,41 @@ class EleveParent(models.Model):
 
     def __str__(self):
         return f"{self.id_eleve} - {self.id_parent} ({self.lien})"
+
+class CodeLiaison(models.Model):
+    """Code unique généré pour lier un élève à un parent."""
+    import string
+    import random
+    from django.utils import timezone
+    from datetime import timedelta
+
+    def generate_code():
+        chars = string.ascii_uppercase + string.digits
+        return ''.join(random.choices(chars, k=8))
+
+    def default_expiration():
+        from django.utils import timezone
+        from datetime import timedelta
+        return timezone.now() + timedelta(hours=48)
+
+    id_code = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_eleve = models.ForeignKey(Eleves, on_delete=models.CASCADE, related_name='codes_liaison')
+    code = models.CharField(max_length=8, unique=True, default=generate_code)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_expiration = models.DateTimeField(default=default_expiration)
+    utilise = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'codes_liaison'
+        verbose_name = 'Code de liaison'
+        verbose_name_plural = 'Codes de liaison'
+
+    def est_valide(self):
+        from django.utils import timezone
+        return not self.utilise and self.date_expiration > timezone.now()
+
+    def __str__(self):
+        return f"Code {self.code} pour {self.id_eleve}"
+
+
+

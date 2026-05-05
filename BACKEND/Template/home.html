@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>bienvevue sur notre beau site de programmation</h1>
+    <p>Flux d'Exécution Complet pour une Clinique Partenaire :
+
+        S'inscrire via /api/b2b/onboarding (Uploader ses agréments).
+        Attendre l'email de validation de l'Admin contenant le Client Secret.
+        Appeler /api/b2b/oauth/token avec ces clés pour obtenir un JWT (valable 1h).
+        Demander au patient son Code PIN.
+        Uploader la visite et l'ordonnance via /api/b2b/dossier-medical/visite en fournissant le Token JWT, le PIN, et le Numéro de Carnet du patient.s
+
+    </p>
+</body>
+</html>

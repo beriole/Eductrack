@@ -1,5 +1,3 @@
-
-# Create your views here.
 from django.http import *
 from django.shortcuts import render
 def home(request):
@@ -8,7 +6,3 @@ def home(request):
                             "donnee":"beriole your the best" })
 def login(request):
     return render(request,'home.html')
-def listeproduit(request):
-    return JsonResponse({
-        "telephone":["samsung, xiaomi, "]
-    })

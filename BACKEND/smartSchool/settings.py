@@ -11,22 +11,30 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+import environ
+from datetime import timedelta
+
+env = environ.Env(
+    DEBUG=(bool, False)
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Take environment variables from .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-4^_0nr8+d0n*bu4kkcn8z(s_2)s4=wa(p2ba!n%bx#d+#oy5f3'
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-4^_0nr8+d0n*bu4kkcn8z(s_2)s4=wa(p2ba!n%bx#d+#oy5f3')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
 
 # Application definition
 
@@ -37,10 +45,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    # Third party
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'django_filters',
+    'corsheaders',
+    'drf_spectacular',
+    
+    # Local apps
     'school',
 ]
 
 MIDDLEWARE = [
+    'django.middleware.gzip.GZipMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -55,7 +75,9 @@ ROOT_URLCONF = 'smartSchool.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            'Template'
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -74,15 +96,48 @@ WSGI_APPLICATION = 'smartSchool.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'smartschool',
-        'USER': 'postgres',
-        'PASSWORD': 'beriole',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': env.db('DATABASE_URL', default='postgres://postgres:beriole@localhost:5432/smartschool')
 }
+
+# Email settings (Similaire à Nodemailer)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='votre_email@gmail.com')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='votre_mot_de_passe_app')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+}
+
+# Simple JWT settings
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# Spectacular Swagger settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'EduTrack API',
+    'DESCRIPTION': 'API complète pour l\'application EduTrack',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
+# CORS configuration
+CORS_ALLOW_ALL_ORIGINS = True # For development only, adjust for prod
 
 
 # Password validation
@@ -122,3 +177,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Cache configuration (LocMemCache instead of Redis)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'edutrack-cache',
+    }
+}
