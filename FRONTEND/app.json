@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "EduTrack",
+    "slug": "edutrack",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E3A5F"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "cm.edutrack.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1E3A5F"
+      },
+      "package": "cm.edutrack.app",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "NOTIFICATIONS",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1E3A5F"
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-sqlite"
+    ],
+    "scheme": "edutrack",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

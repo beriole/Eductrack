@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "255519401550",
+    "project_id": "pressing-3a96a",
+    "storage_bucket": "pressing-3a96a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:255519401550:android:8721a6ad24141ab905c51f",
+        "android_client_info": {
+          "package_name": "cm.edutrack.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfp1sTZkXR1coqJw4MK7SvcutXhCTVGo8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -7,6 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from school.serializers import RegisterSerializer, UtilisateurSerializer
 from django.contrib.auth import authenticate
 from django.core.cache import cache
+from school.tasks import send_verification_email
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -15,10 +16,15 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            # Generate tokens
+            # Envoyer email de vérification en arrière-plan
+            send_verification_email.delay(
+                str(user.id_utilisateur),
+                user.email,
+                user.prenom or user.nom,
+            )
             refresh = RefreshToken.for_user(user)
             return Response({
-                "message": "Inscription réussie.",
+                "message": "Inscription réussie. Vérifiez votre email pour activer votre compte.",
                 "user": UtilisateurSerializer(user).data,
                 "tokens": {
                     "refresh": str(refresh),

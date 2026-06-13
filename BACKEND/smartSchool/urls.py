@@ -16,6 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from . import views
 from school import urls
 
@@ -25,3 +27,7 @@ urlpatterns = [
     path('', include('school.urls')),
     path('api/v1/', include('smartSchool.api_urls')),
 ]
+
+# Sert les fichiers téléversés (PDF de cours/épreuves) en développement.
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

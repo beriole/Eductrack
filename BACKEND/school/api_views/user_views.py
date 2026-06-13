@@ -50,6 +50,19 @@ class UserMeView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class PushTokenView(APIView):
+    """Enregistre le token push (Expo ou FCM) de l'appareil de l'utilisateur."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = request.data.get('push_token', '').strip()
+        if not token:
+            return Response({"error": "push_token requis."}, status=status.HTTP_400_BAD_REQUEST)
+        request.user.push_token = token
+        request.user.save(update_fields=['push_token'])
+        return Response({"message": "Token push enregistré."})
+
+
 class UserAvatarUploadView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)

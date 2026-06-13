@@ -3,7 +3,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
-from school.models import Cours, Enseignants
+from django.db import models
+from school.models import Cours, Enseignants, Eleves
 from school.serializers import CoursSerializer
 from school.utils import send_email_async
 from django.conf import settings
@@ -20,9 +21,18 @@ class CoursListView(generics.ListCreateAPIView):
             # Les enseignants voient tous les cours publiés + les leurs
             enseignant = Enseignants.objects.get(id_utilisateur=user.id_utilisateur)
             return Cours.objects.filter(id_enseignant=enseignant) | Cours.objects.filter(statut='publie')
-        else:
-            # Les élèves et autres ne voient que les cours publiés
-            return Cours.objects.filter(statut='publie')
+
+        # Les élèves ne voient que les cours publiés DE LEUR CLASSE.
+        qs = Cours.objects.filter(statut='publie')
+        if user.role == 'eleve':
+            eleve = Eleves.objects.filter(id_utilisateur=user.id_utilisateur).first()
+            if eleve and eleve.niveau_scolaire:
+                qs = qs.filter(niveau=eleve.niveau_scolaire)
+                # Si l'élève a une série, on garde les cours sans série (tronc commun)
+                # ou ceux de sa série.
+                if eleve.serie:
+                    qs = qs.filter(models.Q(serie=eleve.serie) | models.Q(serie__isnull=True) | models.Q(serie=''))
+        return qs
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -32,7 +42,7 @@ class CoursListView(generics.ListCreateAPIView):
         enseignant = Enseignants.objects.get(id_utilisateur=user.id_utilisateur)
         serializer.save(id_enseignant=enseignant, statut='brouillon')
 
-class CoursDetailView(generics.RetrieveUpdateAPIView):
+class CoursDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Cours.objects.all()
     serializer_class = CoursSerializer
     permission_classes = [IsAuthenticated]
@@ -53,6 +63,15 @@ class CoursDetailView(generics.RetrieveUpdateAPIView):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Vous ne pouvez modifier que vos propres cours.")
         serializer.save()
+
+    def perform_destroy(self, instance):
+        from rest_framework.exceptions import PermissionDenied
+        if str(instance.id_enseignant.id_utilisateur) != str(self.request.user.id_utilisateur):
+            raise PermissionDenied("Vous ne pouvez supprimer que vos propres cours.")
+        # On ne supprime pas un cours déjà publié (intégrité de la banque).
+        if instance.statut == 'publie':
+            raise PermissionDenied("Un cours publié ne peut pas être supprimé.")
+        instance.delete()
 
 class CoursSoumettreView(APIView):
     permission_classes = [IsAuthenticated]

@@ -1,0 +1,424 @@
+
+<style>
+#uml { width:100%; overflow-x:auto; }
+#uml svg { min-width: 900px; }
+#uml svg .classLabel .label { font-size: 13px !important; }
+.legend { display:flex; flex-wrap:wrap; gap:10px; margin:14px 0 4px; font-size:12px; color:var(--color-text-secondary); }
+.leg-item { display:flex; align-items:center; gap:6px; }
+.leg-line { width:28px; height:2px; }
+.leg-dot { width:10px; height:10px; border-radius:50%; }
+</style>
+
+<div class="legend">
+  <span class="leg-item"><span class="leg-dot" style="background:#185FA5"></span> Acteurs</span>
+  <span class="leg-item"><span class="leg-dot" style="background:#0F6E56"></span> Modules fonctionnels</span>
+  <span class="leg-item"><span class="leg-dot" style="background:#6C3483"></span> Entités IA</span>
+  <span class="leg-item"><span class="leg-dot" style="background:#854F0B"></span> Paiement / Abonnement</span>
+  <span class="leg-item"><span class="leg-line" style="background:#888; border-top:2px solid #888;"></span> Association</span>
+  <span class="leg-item"><span class="leg-line" style="background:transparent; border-top:2px dashed #888;"></span> Dépendance</span>
+  <span class="leg-item"><span style="font-size:14px; line-height:1;">◇</span> Agrégation</span>
+  <span class="leg-item"><span style="font-size:14px; line-height:1;">▷</span> Héritage</span>
+</div>
+
+<div id="uml"></div>
+
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '12px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#555',
+    textColor: dark ? '#e0ddd4' : '#1C2833',
+    primaryColor: dark ? '#1a3a5c' : '#D6EAF8',
+    primaryBorderColor: dark ? '#378ADD' : '#185FA5',
+    primaryTextColor: dark ? '#B5D4F4' : '#042C53',
+    secondaryColor: dark ? '#0b3d2e' : '#D5F5E3',
+    secondaryBorderColor: dark ? '#1D9E75' : '#0F6E56',
+    secondaryTextColor: dark ? '#9FE1CB' : '#04342C',
+    tertiaryColor: dark ? '#3a1f5c' : '#E8DAEF',
+    tertiaryBorderColor: dark ? '#7F77DD' : '#6C3483',
+    tertiaryTextColor: dark ? '#CECBF6' : '#26215C',
+    classText: dark ? '#e0ddd4' : '#1C2833',
+    edgeLabelBackground: dark ? '#2a2a2a' : '#ffffff',
+    background: 'transparent',
+    mainBkg: dark ? '#1a3a5c' : '#D6EAF8',
+    nodeBkg: dark ? '#1a3a5c' : '#EBF5FB',
+    nodeBorder: dark ? '#378ADD' : '#185FA5',
+    clusterBkg: dark ? '#1a1a2e' : '#f8f8f8',
+    titleColor: dark ? '#B5D4F4' : '#042C53',
+  },
+  classDiagram: { useMaxWidth: false }
+});
+
+const diagram = `classDiagram
+  direction TB
+
+  class Utilisateur {
+    +String id
+    +String nom
+    +String prenom
+    +String email
+    +String motDePasse
+    +String telephone
+    +String langue
+    +Date dateInscription
+    +Boolean actif
+    +seConnecter()
+    +seDeconnecter()
+    +modifierProfil()
+    +changerLangue()
+  }
+
+  class Eleve {
+    +String niveauScolaire
+    +String serie
+    +String region
+    +String ville
+    +int scoreGlobal
+    +int streakJours
+    +int pointsGamification
+    +Date derniereActivite
+    +passerDiagnostic()
+    +accederEpreuve()
+    +demarrerSimulation()
+    +consulterPlanning()
+    +activerModeFocus()
+    +obtenirRecommandations()
+  }
+
+  class Parent {
+    +Boolean notificationsActives
+    +String emailRapport
+    +String telephoneSMS
+    +consulterTableauDeBord()
+    +recevoirRapport()
+    +configurerAlertes()
+    +suivreTempsEtude()
+  }
+
+  class Enseignant {
+    +String specialite
+    +String etablissement
+    +Boolean verifie
+    +float tauxRemuneration
+    +publierCours()
+    +creerEvaluation()
+    +consulterStatistiques()
+    +suivreEleves()
+  }
+
+  class Administrateur {
+    +String niveau
+    +gererUtilisateurs()
+    +gererAbonnements()
+    +modererContenu()
+    +consulterTableauGlobal()
+    +configurerSysteme()
+  }
+
+  class Abonnement {
+    +String id
+    +String formule
+    +float montant
+    +String devise
+    +String periodicite
+    +Date dateDebut
+    +Date dateExpiration
+    +Boolean actif
+    +String[] fonctionnalitesIncluses
+    +renouveler()
+    +resilier()
+    +upgrader()
+    +verifierAcces(fonctionnalite)
+  }
+
+  class Paiement {
+    +String id
+    +float montant
+    +String methodePaiement
+    +String statut
+    +Date datePaiement
+    +String referenceTransaction
+    +String operateur
+    +traiter()
+    +confirmer()
+    +rembourser()
+  }
+
+  class Matiere {
+    +String id
+    +String nom
+    +String code
+    +String[] niveaux
+    +String[] series
+    +int coefficient
+    +String langue
+    +obtenirExercices()
+    +obtenirEpreuves()
+  }
+
+  class Epreuve {
+    +String id
+    +String titre
+    +String type
+    +String niveau
+    +String serie
+    +int annee
+    +int dureeMinutes
+    +String source
+    +String langue
+    +String statut
+    +obtenirQuestions()
+    +calculerNote(reponses)
+    +obtenirCorrige()
+  }
+
+  class Question {
+    +String id
+    +String enonce
+    +String type
+    +String[] options
+    +String reponseCorrecte
+    +int points
+    +String explication
+    +String difficulte
+    +valider(reponse)
+    +obtenirExplication()
+  }
+
+  class Session {
+    +String id
+    +Date dateDebut
+    +Date dateFin
+    +int dureeReelle
+    +String mode
+    +String statut
+    +float noteObtenue
+    +int questionsTotales
+    +int bonnesReponses
+    +demarrer()
+    +terminer()
+    +calculerResultat()
+    +genererRapport()
+  }
+
+  class Reponse {
+    +String id
+    +String contenu
+    +Boolean estCorrecte
+    +int tempsReponse
+    +Date horodatage
+    +soumettre()
+    +corriger()
+  }
+
+  class DiagnosticNiveau {
+    +String id
+    +Date datePassage
+    +String[] matieresTestees
+    +float scoreGlobal
+    +Map~String,float~ scoreParMatiere
+    +String[] lacunesDetectees
+    +executer()
+    +analyserResultats()
+    +genererParcours()
+  }
+
+  class Lacune {
+    +String id
+    +String matiere
+    +String chapitre
+    +String notion
+    +String niveau
+    +String statut
+    +float tauxMaitrise
+    +Date detectee
+    +marquerEnCours()
+    +marquerMaitrisee()
+    +obtenirExercicesCibles()
+  }
+
+  class PlanningEtude {
+    +String id
+    +Date dateGeneration
+    +Date semaineDebut
+    +String[] disponibilites
+    +Boolean actif
+    +generer()
+    +ajuster()
+    +obtenirSessionsSemaine()
+    +envoyer rappels()
+  }
+
+  class SessionEtude {
+    +String id
+    +String matiere
+    +Date dateHeure
+    +int dureeMinutes
+    +Boolean completee
+    +Boolean rappelEnvoye
+    +demarrer()
+    +terminer()
+    +reporterRappel()
+  }
+
+  class ChatbotIA {
+    +String modele
+    +int questionsJour
+    +int limiteDailyQuestions
+    +String langue
+    +repondre(question)
+    +expliquerNotion(notion)
+    +resoudreExercice(exercice)
+    +obtenirHistorique()
+  }
+
+  class MessageChat {
+    +String id
+    +String role
+    +String contenu
+    +Date horodatage
+    +String matiere
+    +envoyer()
+    +obtenirReponse()
+  }
+
+  class SystemeRemuneration {
+    +float tauxParVue
+    +float tauxParAbonnement
+    +calculerGains(enseignant)
+    +genererFiche(periode)
+    +verserPaiement()
+  }
+
+  class Cours {
+    +String id
+    +String titre
+    +String contenu
+    +String niveau
+    +String serie
+    +String langue
+    +int nombreVues
+    +Date datePublication
+    +Boolean valide
+    +publier()
+    +valider()
+    +archiver()
+  }
+
+  class Notification {
+    +String id
+    +String type
+    +String titre
+    +String message
+    +String canal
+    +Boolean lue
+    +Date envoyee
+    +envoyer()
+    +marquerLue()
+  }
+
+  class RapportParental {
+    +String id
+    +Date periode
+    +float moyenneGlobale
+    +int tempsEtudeTotal
+    +int sessionsRealisees
+    +String[] matieresTraitees
+    +String[] lacunesPrincipales
+    +generer()
+    +envoyer()
+  }
+
+  class Badge {
+    +String id
+    +String nom
+    +String description
+    +String icone
+    +String critere
+    +int valeurPoints
+    +verifierObtention(eleve)
+    +attribuer(eleve)
+  }
+
+  class OrientationIA {
+    +String id
+    +String[] aptitudesDetectees
+    +String serieRecommandee
+    +String[] metiersRecommandes
+    +String[] filieresSuperieures
+    +analyserProfil(eleve)
+    +recommanderSerie()
+    +obtenirFichesMetiers()
+  }
+
+  class ModeFocus {
+    +String id
+    +int dureePomodoro
+    +int pauseCourte
+    +int pauseLongue
+    +int sessionsCompletees
+    +int tempsTotal
+    +demarrer()
+    +pauserSession()
+    +terminerSession()
+    +genererRapportFocus()
+  }
+
+  Utilisateur <|-- Eleve
+  Utilisateur <|-- Parent
+  Utilisateur <|-- Enseignant
+  Utilisateur <|-- Administrateur
+
+  Eleve "1" --> "1" Abonnement : possede
+  Abonnement "1" --> "0..*" Paiement : genere
+  Parent "1" --> "1..*" Eleve : supervise
+  Enseignant "1" --> "0..*" Cours : publie
+  Enseignant "1" --> "1" SystemeRemuneration : beneficie
+
+  Eleve "1" --> "0..*" Session : passe
+  Eleve "1" --> "1" DiagnosticNiveau : realise
+  Eleve "1" --> "0..*" Lacune : possede
+  Eleve "1" --> "1" PlanningEtude : suit
+  Eleve "1" --> "0..*" Badge : obtient
+  Eleve "1" --> "1" OrientationIA : consulte
+  Eleve "1" --> "0..*" ModeFocus : utilise
+
+  Session "1" --> "1" Epreuve : porte sur
+  Session "1" --> "1..*" Reponse : contient
+  Epreuve "1" --> "1" Matiere : appartient a
+  Epreuve "1" --> "1..*" Question : compose
+  Reponse "1" --> "1" Question : repond a
+
+  PlanningEtude "1" *--> "1..*" SessionEtude : planifie
+  DiagnosticNiveau "1" --> "1..*" Lacune : detecte
+
+  ChatbotIA "1" *--> "0..*" MessageChat : gere
+  Eleve "1" --> "1" ChatbotIA : utilise
+
+  Parent "1" --> "0..*" RapportParental : recoit
+  Eleve "1" --> "0..*" Notification : recoit
+  Enseignant "1" --> "0..*" Notification : recoit
+
+  Lacune "1" --> "0..*" Cours : recommande
+  Lacune "1" --> "0..*" Epreuve : cible
+  OrientationIA "1" ..> "1..*" Matiere : analyse
+  SystemeRemuneration "1" ..> "1..*" Cours : evalue
+`;
+
+try {
+  const { svg } = await mermaid.render('uml-svg', diagram);
+  document.getElementById('uml').innerHTML = svg;
+  document.querySelector('#uml svg').style.maxWidth = '100%';
+  document.querySelector('#uml svg').style.height = 'auto';
+} catch(e) {
+  document.getElementById('uml').innerHTML = '<p style="color:var(--color-text-danger);padding:1rem;">Erreur de rendu : ' + e.message + '</p>';
+}
+</script>

@@ -5,7 +5,8 @@ from .models import (
     Diagnostics, Lacunes, PlanningsEtude, SessionsEtude,
     MessagesChatbot, Cours, Notifications, RapportsParentaux,
     Badges, EleveBadges, SessionsFocus, Orientations,
-    RemunerationEnseignant, EleveParent
+    RemunerationEnseignant, EleveParent, CodeLiaison,
+    MicroLecons, MicroRevisions, Defis, EleveDefis,
 )
 
 
@@ -163,3 +164,38 @@ class RemunerationEnseignantAdmin(admin.ModelAdmin):
 class EleveParentAdmin(admin.ModelAdmin):
     list_display = ('id_eleve', 'id_parent', 'lien', 'date_liaison', 'actif')
     list_filter = ('lien', 'actif')
+
+
+@admin.register(CodeLiaison)
+class CodeLiaisonAdmin(admin.ModelAdmin):
+    list_display = ('code', 'id_eleve', 'utilise', 'date_creation', 'date_expiration')
+    list_filter = ('utilise',)
+    search_fields = ('code', 'id_eleve__email')
+
+
+@admin.register(MicroLecons)
+class MicroLeconsAdmin(admin.ModelAdmin):
+    list_display = ('titre', 'id_eleve', 'id_matiere', 'source', 'lue', 'date_creation')
+    list_filter = ('source', 'lue')
+    search_fields = ('titre', 'id_eleve__email')
+
+
+@admin.register(MicroRevisions)
+class MicroRevisionsAdmin(admin.ModelAdmin):
+    list_display = ('id_eleve', 'date_jour', 'completee', 'note', 'date_completion')
+    list_filter = ('completee',)
+    search_fields = ('id_eleve__email',)
+
+
+@admin.register(Defis)
+class DefisAdmin(admin.ModelAdmin):
+    list_display = ('titre', 'code', 'type_cible', 'seuil', 'recompense_xp', 'periode', 'actif')
+    list_filter = ('type_cible', 'periode', 'actif')
+    search_fields = ('code', 'titre')
+
+
+@admin.register(EleveDefis)
+class EleveDefisAdmin(admin.ModelAdmin):
+    list_display = ('id_eleve', 'id_defi', 'periode_cle', 'progression', 'complete', 'recompense_reclamee')
+    list_filter = ('complete', 'recompense_reclamee')
+    search_fields = ('id_eleve__email',)

@@ -1,3 +1,4 @@
+import django_filters
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from django.utils.decorators import method_decorator
@@ -7,14 +8,34 @@ from rest_framework.filters import SearchFilter
 from school.models import Matieres
 from school.serializers import MatiereSerializer
 
+
+class MatiereFilter(django_filters.FilterSet):
+    """Filtre par appartenance dans les listes JSON `niveaux` / `series`.
+
+    `niveaux` et `series` sont des JSONField : django-filter ne peut pas les
+    auto-générer. On expose des filtres explicites `?niveau=Tle` / `?serie=C`."""
+    niveau = django_filters.CharFilter(method='filter_niveau')
+    serie = django_filters.CharFilter(method='filter_serie')
+
+    class Meta:
+        model = Matieres
+        fields = []
+
+    def filter_niveau(self, queryset, name, value):
+        return queryset.filter(niveaux__contains=[value])
+
+    def filter_serie(self, queryset, name, value):
+        return queryset.filter(series__contains=[value])
+
+
 class MatiereListView(generics.ListAPIView):
     queryset = Matieres.objects.filter(actif=True)
     serializer_class = MatiereSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ['niveaux', 'series']
+    filterset_class = MatiereFilter
     search_fields = ['nom', 'code']
 
-    @method_decorator(cache_page(60 * 60)) # Cache for 1 hour
+    @method_decorator(cache_page(60 * 60))  # Cache 1 heure
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)

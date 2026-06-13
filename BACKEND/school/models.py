@@ -1,5 +1,8 @@
 import uuid
+import string
+import random
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
@@ -37,6 +40,7 @@ class Utilisateur(AbstractUser):
     actif = models.BooleanField(default=True)
     email_verifie = models.BooleanField(default=False)
     token_reset = models.CharField(max_length=255, blank=True, null=True)
+    push_token = models.CharField(max_length=500, blank=True, null=True)
     date_creation = models.DateTimeField(auto_now_add=True)
     derniere_connexion = models.DateTimeField(blank=True, null=True)
 
@@ -293,6 +297,13 @@ class Epreuves(models.Model):
     duree_minutes = models.PositiveSmallIntegerField(default=120)
     langue = models.CharField(max_length=2, choices=LANGUE_CHOICES, default='fr')
     nb_questions = models.PositiveSmallIntegerField(default=0)
+    corrige = models.TextField(blank=True, null=True, help_text="Corrigé global rédigé par l'enseignant.")
+    fichier_pdf = models.FileField(upload_to='epreuves_pdf/', blank=True, null=True,
+                                   help_text="Sujet/annale au format PDF, consultable par l'élève.")
+    corrige_pdf = models.FileField(upload_to='epreuves_corriges/', blank=True, null=True,
+                                   help_text="Corrigé au format PDF, visible par l'élève après composition.")
+    notif_publication_envoyee = models.BooleanField(default=False,
+                                   help_text="Empêche de re-notifier les élèves pour ce contenu.")
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='actif')
     date_ajout = models.DateTimeField(auto_now_add=True)
 
@@ -538,6 +549,10 @@ class Cours(models.Model):
     niveau = models.CharField(max_length=10, choices=NIVEAU_CHOICES)
     serie = models.CharField(max_length=10, choices=SERIE_CHOICES, blank=True, null=True)
     langue = models.CharField(max_length=2, choices=LANGUE_CHOICES, default='fr')
+    fichier_pdf = models.FileField(upload_to='cours_pdf/', blank=True, null=True,
+                                   help_text="Cours au format PDF, consultable par l'élève.")
+    notif_publication_envoyee = models.BooleanField(default=False,
+                                   help_text="Empêche de re-notifier les élèves à la publication.")
     nb_vues = models.PositiveIntegerField(default=0)
     valide = models.BooleanField(default=False)
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')
@@ -561,6 +576,8 @@ class Notifications(models.Model):
         ('badge', 'Badge'),
         ('alerte', 'Alerte'),
         ('promo', 'Promotion'),
+        ('coach', 'Coach'),
+        ('nouveau_contenu', 'Nouveau contenu'),
     ]
     CANAL_CHOICES = [
         ('push', 'Push'),
@@ -760,10 +777,6 @@ class EleveParent(models.Model):
 
 class CodeLiaison(models.Model):
     """Code unique généré pour lier un élève à un parent."""
-    import string
-    import random
-    from django.utils import timezone
-    from datetime import timedelta
 
     def generate_code():
         chars = string.ascii_uppercase + string.digits
@@ -792,6 +805,180 @@ class CodeLiaison(models.Model):
 
     def __str__(self):
         return f"Code {self.code} pour {self.id_eleve}"
+
+
+class MicroLecons(models.Model):
+    """Micro-leçon courte ciblant une lacune d'un élève (Module 11).
+
+    Générée par l'IA (ou par un fallback méthodologique) à partir d'une lacune
+    détectée, puis persistée pour être consultée sans la régénérer."""
+    SOURCE_CHOICES = [
+        ('ia', 'IA'),
+        ('fallback', 'Fallback'),
+    ]
+
+    id_lecon = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_eleve = models.ForeignKey(Eleves, on_delete=models.CASCADE, related_name='micro_lecons')
+    id_matiere = models.ForeignKey(Matieres, on_delete=models.RESTRICT, related_name='micro_lecons')
+    id_lacune = models.ForeignKey(
+        Lacunes, on_delete=models.SET_NULL, null=True, blank=True, related_name='micro_lecons')
+    id_cours = models.ForeignKey(
+        Cours, on_delete=models.SET_NULL, null=True, blank=True, related_name='micro_lecons',
+        help_text="Cours de référence suggéré pour approfondir.")
+    titre = models.CharField(max_length=200)
+    contenu = models.TextField()
+    points_cles = models.JSONField(default=list, blank=True)
+    source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default='ia')
+    lue = models.BooleanField(default=False)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'micro_lecons'
+        verbose_name = 'Micro-leçon'
+        verbose_name_plural = 'Micro-leçons'
+        ordering = ['-date_creation']
+
+    def __str__(self):
+        return f"{self.titre} - {self.id_eleve}"
+
+
+class MicroRevisions(models.Model):
+    """Révision quotidienne courte (style Duolingo).
+
+    Chaque jour, un petit lot de questions (priorité aux lacunes) est assemblé
+    dans une épreuve dédiée. La complétion entretient une série quotidienne."""
+    id_revision = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_eleve = models.ForeignKey(Eleves, on_delete=models.CASCADE, related_name='revisions_quotidiennes')
+    id_epreuve = models.ForeignKey(Epreuves, on_delete=models.SET_NULL, null=True, blank=True, related_name='revisions')
+    date_jour = models.DateField()
+    completee = models.BooleanField(default=False)
+    note = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+    date_completion = models.DateTimeField(blank=True, null=True)
+    source = models.CharField(max_length=10, default='ia', blank=True)  # ia | banque
+    rappel_envoye = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'micro_revisions'
+        verbose_name = 'Micro-révision'
+        verbose_name_plural = 'Micro-révisions'
+        ordering = ['-date_jour']
+        constraints = [
+            models.UniqueConstraint(fields=['id_eleve', 'date_jour'], name='uq_revision_jour')
+        ]
+
+    def __str__(self):
+        return f"Révision {self.date_jour} - {self.id_eleve}"
+
+
+class Defis(models.Model):
+    """Catalogue des défis de gamification (objectifs à atteindre)."""
+    TYPE_CIBLE_CHOICES = [
+        ('sessions_semaine', 'Sessions terminées (semaine)'),
+        ('revisions_semaine', 'Révisions quotidiennes (semaine)'),
+        ('streak', 'Série de jours'),
+        ('exercices_total', 'Exercices cumulés'),
+        ('score_max', 'Meilleure note /20'),
+    ]
+    PERIODE_CHOICES = [
+        ('quotidien', 'Quotidien'),
+        ('hebdomadaire', 'Hebdomadaire'),
+        ('permanent', 'Permanent'),
+    ]
+
+    id_defi = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=40, unique=True)
+    titre = models.CharField(max_length=120)
+    description = models.CharField(max_length=255)
+    type_cible = models.CharField(max_length=30, choices=TYPE_CIBLE_CHOICES)
+    seuil = models.PositiveIntegerField(default=1)
+    recompense_xp = models.PositiveIntegerField(default=50)
+    periode = models.CharField(max_length=15, choices=PERIODE_CHOICES, default='hebdomadaire')
+    icone = models.CharField(max_length=40, default='flag', blank=True)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'defis'
+        verbose_name = 'Défi'
+        verbose_name_plural = 'Défis'
+
+    def __str__(self):
+        return f"{self.titre} ({self.code})"
+
+
+class EleveDefis(models.Model):
+    """Progression d'un élève sur un défi pour une période donnée."""
+    id_eleve_defi = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_eleve = models.ForeignKey(Eleves, on_delete=models.CASCADE, related_name='defis')
+    id_defi = models.ForeignKey(Defis, on_delete=models.CASCADE, related_name='participations')
+    periode_cle = models.CharField(max_length=20)  # ex. '2026-W24', '2026-06-10', 'perm'
+    progression = models.PositiveIntegerField(default=0)
+    complete = models.BooleanField(default=False)
+    recompense_reclamee = models.BooleanField(default=False)
+    date_completion = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'eleve_defis'
+        verbose_name = 'Défi élève'
+        verbose_name_plural = 'Défis élèves'
+        constraints = [
+            models.UniqueConstraint(fields=['id_eleve', 'id_defi', 'periode_cle'], name='uq_eleve_defi_periode')
+        ]
+
+    def __str__(self):
+        return f"{self.id_eleve} - {self.id_defi} ({self.periode_cle})"
+
+
+class Avis(models.Model):
+    """Note (1-5) et commentaire laissés par un élève sur un cours OU une épreuve."""
+    id_avis = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_eleve = models.ForeignKey(Eleves, on_delete=models.CASCADE, related_name='avis')
+    id_cours = models.ForeignKey(Cours, on_delete=models.CASCADE, null=True, blank=True, related_name='avis')
+    id_epreuve = models.ForeignKey(Epreuves, on_delete=models.CASCADE, null=True, blank=True, related_name='avis')
+    note = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    commentaire = models.TextField(blank=True, null=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_maj = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'avis'
+        verbose_name = 'Avis'
+        verbose_name_plural = 'Avis'
+        ordering = ['-date_creation']
+        constraints = [
+            models.UniqueConstraint(fields=['id_eleve', 'id_cours'], condition=Q(id_cours__isnull=False), name='uq_avis_eleve_cours'),
+            models.UniqueConstraint(fields=['id_eleve', 'id_epreuve'], condition=Q(id_epreuve__isnull=False), name='uq_avis_eleve_epreuve'),
+            models.CheckConstraint(
+                condition=(Q(id_cours__isnull=False) & Q(id_epreuve__isnull=True)) | (Q(id_cours__isnull=True) & Q(id_epreuve__isnull=False)),
+                name='avis_cours_xor_epreuve',
+            ),
+        ]
+
+    def __str__(self):
+        cible = self.id_cours_id or self.id_epreuve_id
+        return f"{self.id_eleve} → {cible} ({self.note}/5)"
+
+
+class Favori(models.Model):
+    """Mise en favori d'un cours OU d'une épreuve par un élève."""
+    id_favori = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_eleve = models.ForeignKey(Eleves, on_delete=models.CASCADE, related_name='favoris')
+    id_cours = models.ForeignKey(Cours, on_delete=models.CASCADE, null=True, blank=True, related_name='favoris')
+    id_epreuve = models.ForeignKey(Epreuves, on_delete=models.CASCADE, null=True, blank=True, related_name='favoris')
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'favoris'
+        verbose_name = 'Favori'
+        verbose_name_plural = 'Favoris'
+        ordering = ['-date_creation']
+        constraints = [
+            models.UniqueConstraint(fields=['id_eleve', 'id_cours'], condition=Q(id_cours__isnull=False), name='uq_favori_eleve_cours'),
+            models.UniqueConstraint(fields=['id_eleve', 'id_epreuve'], condition=Q(id_epreuve__isnull=False), name='uq_favori_eleve_epreuve'),
+        ]
+
+    def __str__(self):
+        cible = self.id_cours_id or self.id_epreuve_id
+        return f"{self.id_eleve} ♥ {cible}"
 
 
 

@@ -1,6 +1,51 @@
 from rest_framework import serializers
-from .models import Utilisateur, Eleves, Parents, Enseignants, Matieres, Cours, Questions, Epreuves, Badges, EleveBadges, Diagnostics, Lacunes, RapportsParentaux
+from .models import (
+    Utilisateur, Eleves, Parents, Enseignants, Matieres, Cours, Questions,
+    Epreuves, Badges, EleveBadges, Diagnostics, Lacunes, RapportsParentaux,
+    SessionsExamen, Reponses, Notifications, MessagesChatbot, SessionsFocus,
+    Abonnements, Paiements, PlanningsEtude, SessionsEtude, Orientations,
+    MicroLecons, Avis, Favori,
+)
 from django.contrib.auth.password_validation import validate_password
+from django.core.cache import cache
+from django.db.models import Avg
+
+
+class FeedbackFieldsMixin(serializers.Serializer):
+    """Ajoute note_moyenne / nb_avis / est_favori / mon_avis à un contenu (cours/épreuve).
+
+    L'objet doit exposer les related_names `avis` et `favoris`. `est_favori` et
+    `mon_avis` dépendent de l'élève courant (contexte `request`).
+    """
+    note_moyenne = serializers.SerializerMethodField()
+    nb_avis = serializers.SerializerMethodField()
+    est_favori = serializers.SerializerMethodField()
+    mon_avis = serializers.SerializerMethodField()
+
+    def _eleve_id(self):
+        req = self.context.get('request')
+        user = getattr(req, 'user', None)
+        if user and user.is_authenticated and getattr(user, 'role', None) == 'eleve':
+            return user.id_utilisateur
+        return None
+
+    def get_note_moyenne(self, obj):
+        moy = obj.avis.aggregate(m=Avg('note'))['m']
+        return round(moy, 1) if moy is not None else None
+
+    def get_nb_avis(self, obj):
+        return obj.avis.count()
+
+    def get_est_favori(self, obj):
+        eid = self._eleve_id()
+        return bool(eid and obj.favoris.filter(id_eleve=eid).exists())
+
+    def get_mon_avis(self, obj):
+        eid = self._eleve_id()
+        if not eid:
+            return None
+        a = obj.avis.filter(id_eleve=eid).first()
+        return {'note': a.note, 'commentaire': a.commentaire} if a else None
 
 class UtilisateurSerializer(serializers.ModelSerializer):
     class Meta:
@@ -96,14 +141,18 @@ class MatiereSerializer(serializers.ModelSerializer):
         model = Matieres
         fields = '__all__'
 
-class CoursSerializer(serializers.ModelSerializer):
+class CoursSerializer(FeedbackFieldsMixin, serializers.ModelSerializer):
     matiere_nom = serializers.CharField(source='id_matiere.nom', read_only=True)
+    matiere_code = serializers.CharField(source='id_matiere.code', read_only=True)
     enseignant_nom = serializers.SerializerMethodField()
 
     class Meta:
         model = Cours
         fields = '__all__'
-        read_only_fields = ['id_cours', 'nb_vues', 'valide', 'date_publication', 'date_creation']
+        # id_enseignant et statut sont fixés par la vue (perform_create / soumettre),
+        # jamais par le client → read-only pour ne pas être exigés à la création.
+        read_only_fields = ['id_cours', 'id_enseignant', 'statut', 'nb_vues', 'valide',
+                            'date_publication', 'date_creation']
 
     def get_enseignant_nom(self, obj):
         return f"{obj.id_enseignant.prenom} {obj.id_enseignant.nom}"
@@ -113,8 +162,20 @@ class QuestionSerializer(serializers.ModelSerializer):
         model = Questions
         fields = '__all__'
 
-class EpreuveSerializer(serializers.ModelSerializer):
+
+class QuestionExamSerializer(serializers.ModelSerializer):
+    """Version « mode examen » : n'expose JAMAIS la réponse correcte ni
+    l'explication tant que l'élève est en train de composer (anti-triche)."""
+    class Meta:
+        model = Questions
+        fields = [
+            'id_question', 'numero_ordre', 'enonce', 'type_question',
+            'options', 'points', 'difficulte', 'image_url',
+        ]
+
+class EpreuveSerializer(FeedbackFieldsMixin, serializers.ModelSerializer):
     matiere_nom = serializers.CharField(source='id_matiere.nom', read_only=True)
+    matiere_code = serializers.CharField(source='id_matiere.code', read_only=True)
     nb_questions_detail = serializers.SerializerMethodField()
 
     class Meta:
@@ -123,6 +184,56 @@ class EpreuveSerializer(serializers.ModelSerializer):
 
     def get_nb_questions_detail(self, obj):
         return obj.questions.count()
+
+    def to_representation(self, instance):
+        """Anti-triche : le corrigé (texte + PDF) n'est exposé que si le contexte
+        l'autorise (propriétaire enseignant, ou élève après composition)."""
+        data = super().to_representation(instance)
+        if not self.context.get('reveler_corrige'):
+            data.pop('corrige', None)
+            data.pop('corrige_pdf', None)
+        return data
+
+
+class AvisSerializer(serializers.ModelSerializer):
+    eleve_nom = serializers.SerializerMethodField()
+    contenu_titre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Avis
+        fields = ['id_avis', 'id_cours', 'id_epreuve', 'note', 'commentaire',
+                  'eleve_nom', 'contenu_titre', 'date_creation']
+        read_only_fields = ['id_avis', 'eleve_nom', 'contenu_titre', 'date_creation']
+
+    def get_eleve_nom(self, obj):
+        return f"{obj.id_eleve.prenom} {obj.id_eleve.nom}"
+
+    def get_contenu_titre(self, obj):
+        if obj.id_cours_id:
+            return obj.id_cours.titre
+        return obj.id_epreuve.titre if obj.id_epreuve_id else None
+
+
+class FavoriSerializer(serializers.ModelSerializer):
+    contenu_titre = serializers.SerializerMethodField()
+    matiere_nom = serializers.SerializerMethodField()
+    type_contenu = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Favori
+        fields = ['id_favori', 'id_cours', 'id_epreuve', 'type_contenu',
+                  'contenu_titre', 'matiere_nom', 'date_creation']
+
+    def get_type_contenu(self, obj):
+        return 'cours' if obj.id_cours_id else 'epreuve'
+
+    def get_contenu_titre(self, obj):
+        return obj.id_cours.titre if obj.id_cours_id else (obj.id_epreuve.titre if obj.id_epreuve_id else None)
+
+    def get_matiere_nom(self, obj):
+        cible = obj.id_cours or obj.id_epreuve
+        return cible.id_matiere.nom if cible else None
+
 
 class BadgeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -150,6 +261,15 @@ class DiagnosticSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['id_diagnostic', 'id_eleve', 'date_passage']
 
+class MicroLeconSerializer(serializers.ModelSerializer):
+    matiere_nom = serializers.CharField(source='id_matiere.nom', read_only=True)
+    notion = serializers.CharField(source='id_lacune.notion', read_only=True, default=None)
+
+    class Meta:
+        model = MicroLecons
+        fields = '__all__'
+        read_only_fields = ['id_lecon', 'id_eleve', 'source', 'date_creation']
+
 class RapportParentalSerializer(serializers.ModelSerializer):
     eleve_nom = serializers.SerializerMethodField()
 
@@ -159,4 +279,196 @@ class RapportParentalSerializer(serializers.ModelSerializer):
 
     def get_eleve_nom(self, obj):
         return f"{obj.id_eleve.prenom} {obj.id_eleve.nom}"
+
+
+# ─── Sprint 1 Serializers ─────────────────────────────────────────────────────
+
+class EmailVerifySerializer(serializers.Serializer):
+    uid = serializers.UUIDField()
+    token = serializers.CharField()
+
+
+class ResendVerificationSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        if not Utilisateur.objects.filter(email=value).exists():
+            # Ne pas révéler si l'email existe (sécurité)
+            return value
+        return value
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(min_length=6, max_length=6)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate(self, attrs):
+        stored_otp = cache.get(f"otp_reset_{attrs['email']}")
+        if not stored_otp or stored_otp != attrs['otp']:
+            raise serializers.ValidationError({"otp": "Code invalide ou expiré."})
+        return attrs
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Mot de passe actuel incorrect.")
+        return value
+
+    def validate(self, attrs):
+        if attrs['old_password'] == attrs['new_password']:
+            raise serializers.ValidationError({"new_password": "Le nouveau mot de passe doit être différent de l'ancien."})
+        return attrs
+
+
+# ─── Sprint 2 Serializers ─────────────────────────────────────────────────────
+
+class ReponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reponses
+        fields = ['id_reponse', 'id_question', 'contenu_reponse', 'est_correcte', 'points_obtenus', 'temps_reponse_sec']
+        read_only_fields = ['id_reponse', 'est_correcte', 'points_obtenus']
+
+
+class ReponseSubmitSerializer(serializers.Serializer):
+    id_question = serializers.UUIDField()
+    contenu_reponse = serializers.CharField(allow_blank=True)
+    temps_reponse_sec = serializers.IntegerField(required=False, min_value=0)
+
+
+class SessionExamenSerializer(serializers.ModelSerializer):
+    epreuve_titre = serializers.CharField(source='id_epreuve.titre', read_only=True)
+    epreuve_matiere = serializers.CharField(source='id_epreuve.id_matiere.nom', read_only=True)
+    nb_reponses = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SessionsExamen
+        fields = [
+            'id_session', 'id_epreuve', 'epreuve_titre', 'epreuve_matiere',
+            'mode', 'statut', 'date_debut', 'date_fin', 'duree_reelle_sec',
+            'note_obtenue', 'nb_questions', 'nb_bonnes_reponses', 'nb_reponses',
+        ]
+        read_only_fields = [
+            'id_session', 'statut', 'date_debut', 'date_fin',
+            'duree_reelle_sec', 'note_obtenue', 'nb_questions', 'nb_bonnes_reponses',
+        ]
+
+    def get_nb_reponses(self, obj):
+        return obj.reponses.count()
+
+
+class SessionResultatSerializer(serializers.ModelSerializer):
+    reponses = ReponseSerializer(many=True, read_only=True)
+    epreuve_titre = serializers.CharField(source='id_epreuve.titre', read_only=True)
+
+    class Meta:
+        model = SessionsExamen
+        fields = [
+            'id_session', 'epreuve_titre', 'mode', 'statut',
+            'date_debut', 'date_fin', 'duree_reelle_sec',
+            'note_obtenue', 'nb_questions', 'nb_bonnes_reponses', 'reponses',
+        ]
+
+
+# ─── Sprint 3 Serializers ─────────────────────────────────────────────────────
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notifications
+        fields = [
+            'id_notification', 'type_notif', 'titre', 'message',
+            'canal', 'lue', 'date_envoi', 'date_lecture', 'metadata',
+        ]
+        read_only_fields = ['id_notification', 'date_envoi']
+
+
+class MessageChatbotSerializer(serializers.ModelSerializer):
+    matiere_nom = serializers.CharField(source='id_matiere.nom', read_only=True, default=None)
+
+    class Meta:
+        model = MessagesChatbot
+        fields = [
+            'id_message', 'role', 'contenu', 'matiere_nom',
+            'session_chat', 'nb_tokens', 'horodatage',
+        ]
+        read_only_fields = ['id_message', 'horodatage']
+
+
+class SessionFocusSerializer(serializers.ModelSerializer):
+    matiere_nom = serializers.CharField(source='id_matiere.nom', read_only=True, default=None)
+
+    class Meta:
+        model = SessionsFocus
+        fields = [
+            'id_focus', 'duree_pomodoro_min', 'nb_sessions',
+            'temps_total_min', 'matiere_nom', 'date_debut', 'date_fin',
+        ]
+        read_only_fields = ['id_focus', 'date_debut']
+
+
+# ─── Sprint 4 Serializers ─────────────────────────────────────────────────────
+
+class AbonnementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Abonnements
+        fields = [
+            'id_abonnement', 'formule', 'montant', 'periodicite',
+            'date_debut', 'date_expiration', 'renouvellement_auto', 'statut', 'date_creation',
+        ]
+        read_only_fields = ['id_abonnement', 'date_creation']
+
+
+class PaiementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Paiements
+        fields = [
+            'id_paiement', 'montant', 'methode_paiement', 'operateur',
+            'reference_transaction', 'statut', 'date_paiement', 'date_confirmation',
+        ]
+        read_only_fields = ['id_paiement', 'date_paiement']
+
+
+class SessionEtudeSerializer(serializers.ModelSerializer):
+    matiere_nom = serializers.CharField(source='id_matiere.nom', read_only=True)
+    matiere_code = serializers.CharField(source='id_matiere.code', read_only=True)
+
+    class Meta:
+        model = SessionsEtude
+        fields = [
+            'id_session_etude', 'matiere_nom', 'matiere_code',
+            'date_heure', 'duree_minutes', 'objectif', 'completee', 'rappel_envoye',
+        ]
+        read_only_fields = ['id_session_etude']
+
+
+class PlanningEtudeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlanningsEtude
+        fields = [
+            'id_planning', 'semaine_debut', 'disponibilites',
+            'priorites_matieres', 'actif', 'date_generation', 'nb_sessions',
+        ]
+        read_only_fields = ['id_planning', 'date_generation', 'nb_sessions']
+
+
+# ─── Sprint 5 Serializers ─────────────────────────────────────────────────────
+
+class OrientationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Orientations
+        fields = [
+            'id_orientation', 'date_test', 'aptitudes_detectees',
+            'serie_recommandee', 'metiers_recommandes', 'filieres_superieures',
+            'score_global_test', 'reponses_test',
+        ]
+        read_only_fields = ['id_orientation', 'date_test']
 

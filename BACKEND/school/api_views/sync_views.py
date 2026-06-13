@@ -25,7 +25,7 @@ class SyncView(APIView):
         cours = Cours.objects.filter(statut='publie', date_publication__gte=since_date)
         
         # Epreuves
-        epreuves = Epreuves.objects.filter(statut='publie', date_ajout__gte=since_date)
+        epreuves = Epreuves.objects.filter(statut='actif', date_ajout__gte=since_date)
 
         return Response({
             "timestamp_sync": datetime.now().isoformat(),
