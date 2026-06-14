@@ -284,8 +284,8 @@ class RapportParentalSerializer(serializers.ModelSerializer):
 # ─── Sprint 1 Serializers ─────────────────────────────────────────────────────
 
 class EmailVerifySerializer(serializers.Serializer):
-    uid = serializers.UUIDField()
-    token = serializers.CharField()
+    email = serializers.EmailField()
+    otp = serializers.CharField(min_length=6, max_length=6)
 
 
 class ResendVerificationSerializer(serializers.Serializer):

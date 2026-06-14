@@ -189,9 +189,18 @@ export default function NouvelleSessionScreen() {
   const currentAnswer = answers[q.id_question];
 
   // Normaliser les options selon le type de question.
+  // On déduplique : l'IA génère parfois des options identiques, ce qui casse
+  // la sélection (clé dupliquée) et l'affichage.
   let options: Array<{ key: string; texte: string }> = [];
   if (q.type_question === 'qcm' && Array.isArray(q.options)) {
-    options = q.options.map((o) => (typeof o === 'string' ? { key: o, texte: o } : o));
+    const seen = new Set<string>();
+    options = q.options
+      .map((o) => (typeof o === 'string' ? { key: o, texte: o } : o))
+      .filter((o) => {
+        if (!o?.key || seen.has(o.key)) return false;
+        seen.add(o.key);
+        return true;
+      });
   } else if (q.type_question === 'vrai_faux') {
     options = VF_OPTIONS;
   }
@@ -239,7 +248,7 @@ export default function NouvelleSessionScreen() {
               const selected = currentAnswer === opt.key;
               const letter = String.fromCharCode(65 + i);
               return (
-                <TouchableOpacity key={opt.key} style={[styles.option, selected && styles.optionSelected]} onPress={() => handleAnswer(opt.key)} activeOpacity={0.8}>
+                <TouchableOpacity key={`${i}-${opt.key}`} style={[styles.option, selected && styles.optionSelected]} onPress={() => handleAnswer(opt.key)} activeOpacity={0.8}>
                   <View style={[styles.optionKey, selected && styles.optionKeySelected]}>
                     <Text style={[styles.optionKeyText, selected && styles.optionKeyTextSelected]}>{letter}</Text>
                   </View>

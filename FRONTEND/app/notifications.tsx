@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
+import { colors, radius } from '@/src/theme';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -25,7 +26,7 @@ const TYPE_ICON: Record<string, { name: IoniconName; color: string }> = {
   alerte: { name: 'warning', color: '#EF4444' },
   promo: { name: 'gift', color: '#8B5CF6' },
 };
-const DEFAULT_ICON: { name: IoniconName; color: string } = { name: 'notifications', color: '#6C63FF' };
+const DEFAULT_ICON: { name: IoniconName; color: string } = { name: 'notifications', color: colors.primary };
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -71,7 +72,7 @@ export default function NotificationsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#93C5FD" />
+          <Ionicons name="arrow-back" size={22} color="#C7D2FE" />
         </TouchableOpacity>
         <Text style={styles.title}>Notifications {unreadCount > 0 ? `(${unreadCount})` : ''}</Text>
         {unreadCount > 0 && (
@@ -82,13 +83,13 @@ export default function NotificationsScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.centered}><ActivityIndicator size="large" color="#6C63FF" /></View>
+        <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <FlatList
           data={notifs}
           keyExtractor={(n) => n.id_notification}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6C63FF" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           ListEmptyComponent={
             <View style={styles.centered}>
               <Ionicons name="notifications-outline" size={48} color="#9CA3AF" />
@@ -124,20 +125,21 @@ export default function NotificationsScreen() {
   );
 }
 
-const PRIMARY = '#1E3A5F';
-const ACCENT = '#6C63FF';
+const PRIMARY = colors.primary;
+const ACCENT = colors.primary;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, marginTop: 40 },
   header: {
     backgroundColor: PRIMARY, paddingTop: 56, paddingBottom: 16,
     paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center',
+    borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl,
   },
   backBtn: { marginRight: 12 },
-  backText: { color: '#93C5FD', fontSize: 14, fontWeight: '600' },
+  backText: { color: '#C7D2FE', fontSize: 14, fontWeight: '600' },
   title: { flex: 1, fontSize: 18, fontWeight: '800', color: '#fff' },
-  markAll: { color: '#93C5FD', fontSize: 13, fontWeight: '600' },
+  markAll: { color: '#C7D2FE', fontSize: 13, fontWeight: '600' },
   list: { padding: 16, gap: 10 },
   card: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#fff', borderRadius: 14, padding: 14, elevation: 1 },
   cardUnread: { borderLeftWidth: 3, borderLeftColor: ACCENT },

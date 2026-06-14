@@ -27,10 +27,31 @@ NB_QUESTIONS = 5
 DIFFICULTES = ('facile', 'moyen', 'difficile')
 
 SYSTEM_PROMPT = (
-    "Tu es un concepteur d'exercices pour lycéens camerounais (MINESEC / OBC). "
-    "Tu crées de courtes révisions quotidiennes variées et motivantes. "
+    "Tu es un concepteur d'exercices du système éducatif camerounais (MINESEC), "
+    "expert des programmes officiels du collège (6e à 3e) et du lycée (2nde à Tle). "
+    "Tu crées de courtes révisions quotidiennes variées et motivantes, "
+    "RIGOUREUSEMENT adaptées au niveau de classe et à l'âge de l'élève. "
     "Tu réponds UNIQUEMENT par du JSON valide, sans texte autour."
 )
+
+# Repère de programme / difficulté par classe (système camerounais).
+NIVEAU_GUIDE = {
+    '6e':   "6e — 1re année du secondaire (~11-12 ans). Bases du collège : "
+            "nombres entiers/décimaux, géométrie élémentaire, grammaire, anglais débutant, SVT/observation.",
+    '5e':   "5e — collège (~12-13 ans). Fractions, nombres relatifs, proportionnalité, "
+            "triangles, conjugaison, notions d'histoire-géo.",
+    '4e':   "4e — collège (~13-14 ans). Puissances, calcul littéral, théorème de Pythagore, "
+            "physique-chimie d'initiation, SVT.",
+    '3e':   "3e — classe d'examen du BEPC (~14-15 ans). Tout le 1er cycle : équations, "
+            "Thalès, trigonométrie de base, fonctions affines, chimie, électricité.",
+    '2nde': "2nde — entrée au lycée (~15-16 ans). Programme de 2nde : second degré, vecteurs, "
+            "fonctions, physique (mécanique, optique), chimie, selon la série.",
+    '1ere': "1re — lycée (~16-17 ans). Programme de 1re de la série indiquée : dérivées, "
+            "barycentres, probabilités, physique-chimie avancée, etc.",
+    'Tle':  "Terminale — classe d'examen du BACCALAURÉAT (~17-18 ans). Programme exigeant de Tle "
+            "de la série : limites/continuité, dérivation, primitives, intégrales, nombres complexes, "
+            "probabilités, électromagnétisme, chimie organique, génétique.",
+}
 
 
 # ─── Sélection / génération des questions ────────────────────────────────────
@@ -79,6 +100,9 @@ def _valider(data):
         if not enonce or not isinstance(options, list):
             continue
         options = [str(o).strip() for o in options if str(o).strip()]
+        # Déduplique en conservant l'ordre : l'IA renvoie parfois des doublons,
+        # ce qui casse l'affichage et la sélection côté app.
+        options = list(dict.fromkeys(options))
         correcte = (item.get('reponse_correcte') or '').strip()
         if len(options) < 2 or correcte not in options:
             continue
@@ -102,12 +126,23 @@ def _questions_ia(eleve):
     else:
         focus = "Couvre les matières principales du programme de ce niveau."
 
+    niveau_label = NIVEAU_GUIDE.get(eleve.niveau_scolaire, eleve.niveau_scolaire)
     prompt = (
-        f"Niveau : {eleve.niveau_scolaire}"
-        + (f" (série {eleve.serie})" if eleve.serie else "") + "\n"
+        f"CLASSE DE L'ÉLÈVE : {eleve.niveau_scolaire}"
+        + (f" — série {eleve.serie}" if eleve.serie else "") + "\n"
+        f"Repère de programme : {niveau_label}\n"
         f"{focus}\n\n"
-        f"Génère {NB_QUESTIONS} questions QCM courtes et variées pour une "
-        "révision quotidienne. Chaque question a 4 options et UNE bonne réponse.\n"
+        "RÈGLES STRICTES :\n"
+        "1. Les questions doivent correspondre EXACTEMENT au programme officiel "
+        f"camerounais (MINESEC) de la classe de {eleve.niveau_scolaire}.\n"
+        "2. Adapte la difficulté et le vocabulaire à l'âge de l'élève — ni trop "
+        "facile, ni hors-programme.\n"
+        "3. INTERDIT pour le lycée (2nde/1re/Tle) : questions enfantines ou de "
+        "culture générale triviale (ex. « contraire de petit », « 10 - 3 »).\n"
+        "4. Chaque question a 4 options DISTINCTES (aucun doublon) et UNE seule "
+        "bonne réponse.\n"
+        "5. Varie les matières et les notions du programme de cette classe.\n\n"
+        f"Génère {NB_QUESTIONS} questions QCM courtes pour une révision quotidienne.\n"
         "Réponds par un TABLEAU JSON, chaque élément :\n"
         '{"enonce": "...", "options": ["...","...","...","..."], '
         '"reponse_correcte": "<texte exact d\'une option>", '

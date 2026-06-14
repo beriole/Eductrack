@@ -18,23 +18,21 @@ def _generate_token(length=40):
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_verification_email(self, user_id: str, email: str, prenom: str):
-    """Envoie un email de vérification valide 24h."""
-    token = _generate_token()
-    cache.set(f'email_verify_{user_id}', token, timeout=86400)  # 24h
+    """Envoie un code de vérification à 6 chiffres (valable 24h).
 
-    verify_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={token}&uid={user_id}"
+    Modèle OTP (et non lien) : fonctionne sur mobile sans deep-link."""
+    otp = _generate_otp()
+    cache.set(f'email_verify_{user_id}', otp, timeout=86400)  # 24h
 
-    subject = "EduTrack — Vérifiez votre adresse email"
+    subject = "SmartSchool — Code de vérification de votre email"
     html_message = f"""
     <h2>Bonjour {prenom},</h2>
-    <p>Merci de vous être inscrit sur EduTrack.</p>
-    <p>Cliquez sur le lien ci-dessous pour vérifier votre email (valable 24h) :</p>
-    <p><a href="{verify_url}" style="background:#6C63FF;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;">
-        Vérifier mon email
-    </a></p>
+    <p>Bienvenue sur SmartSchool ! Voici votre code de vérification :</p>
+    <h1 style="font-size:48px;letter-spacing:12px;color:#4F46E5;">{otp}</h1>
+    <p>Saisissez-le dans l'application. Ce code expire dans <strong>24 heures</strong>.</p>
     <p>Si vous n'avez pas créé de compte, ignorez cet email.</p>
     """
-    text_message = f"Vérifiez votre email : {verify_url}"
+    text_message = f"Votre code de vérification SmartSchool : {otp} (valable 24h)"
 
     try:
         send_mail(

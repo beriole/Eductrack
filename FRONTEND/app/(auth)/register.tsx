@@ -2,11 +2,12 @@ import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView,
-  Platform, ScrollView,
+  Platform, ScrollView, Image,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/src/store/authStore';
+import { colors, radius } from '@/src/theme';
 
 const ROLES = [
   { key: 'eleve', label: 'Élève' },
@@ -99,7 +100,8 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>EduTrack</Text>
+        <Image source={require('@/assets/icon.png')} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.title}>SmartSchool</Text>
         <Text style={styles.subtitle}>
           {step === 1 ? 'Crée ton compte' : 'Sécurise ton compte'}
         </Text>
@@ -243,48 +245,49 @@ export default function RegisterScreen() {
   );
 }
 
-const PRIMARY = '#1E3A5F';
-const ACCENT = '#6C63FF';
+const PRIMARY = colors.primary;
+const ACCENT = colors.primary;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: colors.bg },
   inner: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 },
-  title: { fontSize: 32, fontWeight: '800', color: PRIMARY, textAlign: 'center', marginBottom: 4 },
-  subtitle: { fontSize: 16, color: '#6B7280', textAlign: 'center', marginBottom: 16 },
+  logo: { width: 64, height: 64, borderRadius: 18, alignSelf: 'center', marginBottom: 10 },
+  title: { fontSize: 32, fontWeight: '800', color: PRIMARY, textAlign: 'center', marginBottom: 4, letterSpacing: -0.5 },
+  subtitle: { fontSize: 16, color: colors.textMuted, textAlign: 'center', marginBottom: 16 },
   steps: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 24 },
-  step: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
+  step: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border },
   stepActive: { backgroundColor: ACCENT },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8, marginTop: 4 },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textMuted, marginBottom: 8, marginTop: 4 },
   roleRow: { flexDirection: 'row', gap: 8, marginBottom: 20 },
   roleBtn: {
-    flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5,
-    borderColor: '#E5E7EB', alignItems: 'center', backgroundColor: '#fff',
+    flex: 1, paddingVertical: 10, borderRadius: radius.sm, borderWidth: 1.5,
+    borderColor: colors.border, alignItems: 'center', backgroundColor: colors.surface,
   },
-  roleBtnActive: { borderColor: ACCENT, backgroundColor: `${ACCENT}15` },
-  roleBtnText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
+  roleBtnActive: { borderColor: ACCENT, backgroundColor: colors.primaryLight },
+  roleBtnText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   roleBtnTextActive: { color: ACCENT },
   input: {
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB',
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 16, marginBottom: 16, color: '#111827',
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 16, marginBottom: 16, color: colors.text,
   },
   chipScroll: { marginBottom: 16 },
   chip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5,
-    borderColor: '#E5E7EB', backgroundColor: '#fff', marginRight: 8,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1.5,
+    borderColor: colors.border, backgroundColor: colors.surface, marginRight: 8,
   },
-  chipActive: { borderColor: ACCENT, backgroundColor: `${ACCENT}15` },
-  chipText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
+  chipActive: { borderColor: ACCENT, backgroundColor: colors.primaryLight },
+  chipText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   chipTextActive: { color: ACCENT },
   button: {
-    backgroundColor: PRIMARY, borderRadius: 12,
+    backgroundColor: PRIMARY, borderRadius: radius.md,
     paddingVertical: 16, alignItems: 'center', marginTop: 8,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  buttonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
   backBtn: { marginTop: 12, alignItems: 'center' },
   buttonRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  backText: { color: '#6B7280', fontSize: 15 },
+  backText: { color: colors.textMuted, fontSize: 15 },
   linkContainer: { marginTop: 24, alignItems: 'center' },
-  link: { color: '#6B7280', fontSize: 14 },
+  link: { color: colors.textMuted, fontSize: 14 },
   linkBold: { color: PRIMARY, fontWeight: '700' },
 });

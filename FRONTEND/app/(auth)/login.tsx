@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,7 +38,7 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           {/* Logo */}
           <View style={styles.logoBadge}>
-            <Ionicons name="school" size={32} color={colors.white} />
+            <Image source={require('@/assets/icon.png')} style={styles.logoImage} resizeMode="contain" />
           </View>
           <Text style={styles.brand}>SmartSchool</Text>
           <Text style={styles.tagline}>Ton excellence scolaire commence ici</Text>
@@ -84,9 +84,11 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.forgot}>
-              <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
-            </TouchableOpacity>
+            <Link href="/(auth)/forgot-password" asChild>
+              <TouchableOpacity style={styles.forgot}>
+                <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
+              </TouchableOpacity>
+            </Link>
 
             <TouchableOpacity onPress={handleLogin} disabled={loading} activeOpacity={0.9} style={styles.button}>
               {loading
@@ -111,9 +113,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 22, paddingVertical: 40 },
   logoBadge: {
-    width: 64, height: 64, borderRadius: 20, backgroundColor: colors.primary,
+    width: 76, height: 76, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...shadow.lg,
   },
+  logoImage: { width: 76, height: 76, borderRadius: 22 },
   brand: { fontSize: 26, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: 16, letterSpacing: -0.5 },
   tagline: { fontSize: 14, color: colors.textMuted, textAlign: 'center', marginTop: 4, marginBottom: 28 },
   card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: 24, ...shadow.md },

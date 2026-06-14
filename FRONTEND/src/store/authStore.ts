@@ -72,10 +72,10 @@ async function registerPushToken() {
     // Canal Android obligatoire pour afficher les notifications (heads-up).
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Rappels EduTrack',
+        name: 'Rappels SmartSchool',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#6C63FF',
+        lightColor: '#4F46E5',
       });
     }
 

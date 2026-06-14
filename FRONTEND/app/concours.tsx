@@ -5,6 +5,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
+import { colors, radius } from '@/src/theme';
 
 interface Concours {
   code: string;
@@ -50,14 +51,14 @@ export default function ConcoursScreen() {
   };
 
   if (loading && concours.length === 0) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#6C63FF" /></View>;
+    return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backRow}>
-          <Ionicons name="arrow-back" size={18} color="#93C5FD" />
+          <Ionicons name="arrow-back" size={18} color="#C7D2FE" />
           <Text style={styles.backText}>Retour</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Préparation aux Concours</Text>
@@ -140,17 +141,17 @@ export default function ConcoursScreen() {
   );
 }
 
-const PRIMARY = '#1E3A5F';
-const ACCENT = '#6C63FF';
+const PRIMARY = colors.primary;
+const ACCENT = colors.primary;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: PRIMARY, paddingTop: 56, paddingBottom: 20, paddingHorizontal: 20 },
+  header: { backgroundColor: PRIMARY, paddingTop: 56, paddingBottom: 20, paddingHorizontal: 20, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 },
-  backText: { color: '#93C5FD', fontWeight: '600', fontSize: 14 },
+  backText: { color: '#C7D2FE', fontWeight: '600', fontSize: 14 },
   title: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  subtitle: { fontSize: 12, color: '#93C5FD', marginTop: 4 },
+  subtitle: { fontSize: 12, color: '#C7D2FE', marginTop: 4 },
   filtres: { marginTop: 12 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB' },
   chipActive: { backgroundColor: ACCENT, borderColor: ACCENT },

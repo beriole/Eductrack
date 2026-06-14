@@ -23,23 +23,24 @@ class EmailVerifyView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        uid = str(serializer.validated_data['uid'])
-        token = serializer.validated_data['token']
-
-        stored_token = cache.get(f'email_verify_{uid}')
-        if not stored_token or stored_token != token:
-            return Response(
-                {"error": "Lien de vérification invalide ou expiré."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        email = serializer.validated_data['email']
+        otp = serializer.validated_data['otp']
 
         try:
-            user = Utilisateur.objects.get(id_utilisateur=uid)
+            user = Utilisateur.objects.get(email=email)
         except Utilisateur.DoesNotExist:
             return Response({"error": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
         if user.email_verifie:
             return Response({"message": "Email déjà vérifié."}, status=status.HTTP_200_OK)
+
+        uid = str(user.id_utilisateur)
+        stored_otp = cache.get(f'email_verify_{uid}')
+        if not stored_otp or stored_otp != otp:
+            return Response(
+                {"error": "Code de vérification invalide ou expiré."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         user.email_verifie = True
         user.save(update_fields=['email_verifie'])

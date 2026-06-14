@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
+import { colors, radius } from '@/src/theme';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -176,7 +177,7 @@ export default function DiagnosticScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backRow}>
-            <Ionicons name="arrow-back" size={18} color="#93C5FD" />
+            <Ionicons name="arrow-back" size={18} color="#C7D2FE" />
             <Text style={styles.backText}>Retour</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Test de diagnostic</Text>
@@ -323,16 +324,16 @@ export default function DiagnosticScreen() {
   );
 }
 
-const PRIMARY = '#1E3A5F';
-const ACCENT = '#6C63FF';
+const PRIMARY = colors.primary;
+const ACCENT = colors.primary;
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: '#F9FAFB' },
-  header: { backgroundColor: PRIMARY, paddingTop: 56, paddingBottom: 24, paddingHorizontal: 20 },
+  container: { flexGrow: 1, backgroundColor: colors.bg },
+  header: { backgroundColor: PRIMARY, paddingTop: 56, paddingBottom: 24, paddingHorizontal: 20, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 },
-  backText: { color: '#93C5FD', fontWeight: '600', fontSize: 14 },
+  backText: { color: '#C7D2FE', fontWeight: '600', fontSize: 14 },
   title: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  subtitle: { fontSize: 13, color: '#93C5FD', marginTop: 4 },
+  subtitle: { fontSize: 13, color: '#C7D2FE', marginTop: 4 },
   introContent: { padding: 24, alignItems: 'center' },
   introIcon: { fontSize: 72, marginBottom: 16, marginTop: 8 },
   introTitle: { fontSize: 20, fontWeight: '800', color: PRIMARY, marginBottom: 20 },
@@ -347,7 +348,7 @@ const styles = StyleSheet.create({
   matiereBadgeText: { fontSize: 13, fontWeight: '600', color: ACCENT },
   startBtn: { backgroundColor: PRIMARY, borderRadius: 16, paddingVertical: 18, width: '100%', alignItems: 'center' },
   startBtnText: { color: '#fff', fontSize: 17, fontWeight: '800' },
-  quizContainer: { flex: 1, backgroundColor: '#F9FAFB' },
+  quizContainer: { flex: 1, backgroundColor: colors.bg },
   quizHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12, backgroundColor: '#fff' },
   quizMatiere: { fontSize: 15, fontWeight: '700', color: PRIMARY },
   quizProgress: { fontSize: 14, fontWeight: '700', color: '#9CA3AF' },

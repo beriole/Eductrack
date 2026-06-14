@@ -144,7 +144,14 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 # ─── Email ────────────────────────────────────────────────────────────────────
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# En dev (DEBUG), on n'envoie pas de vrai email : le contenu (dont l'OTP de
+# réinitialisation) est écrit dans la console du serveur. Surchargeable via
+# EMAIL_BACKEND dans le .env pour tester un vrai envoi SMTP.
+EMAIL_BACKEND = env(
+    'EMAIL_BACKEND',
+    default='django.core.mail.backends.console.EmailBackend' if DEBUG
+    else 'django.core.mail.backends.smtp.EmailBackend',
+)
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)

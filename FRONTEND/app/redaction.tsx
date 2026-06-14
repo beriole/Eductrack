@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
+import { colors, radius } from '@/src/theme';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -76,7 +77,7 @@ export default function RedactionScreen() {
       <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backRow}>
-            <Ionicons name="arrow-back" size={18} color="#93C5FD" />
+            <Ionicons name="arrow-back" size={18} color="#C7D2FE" />
             <Text style={styles.backText}>Retour</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Atelier Rédaction</Text>
@@ -93,7 +94,7 @@ export default function RedactionScreen() {
                   style={[styles.typeBtn, type === tp.code && styles.typeBtnActive]}
                   onPress={() => setType(tp.code)}
                 >
-                  <Ionicons name={tp.icone} size={22} color={type === tp.code ? '#6C63FF' : '#6B7280'} style={styles.typeIcon} />
+                  <Ionicons name={tp.icone} size={22} color={type === tp.code ? colors.primary : '#6B7280'} style={styles.typeIcon} />
                   <Text style={[styles.typeLabel, type === tp.code && styles.typeLabelActive]}>
                     {tp.label}
                   </Text>
@@ -187,16 +188,16 @@ function Stat({ label, value }: { label: string; value: number | string }) {
   );
 }
 
-const PRIMARY = '#1E3A5F';
-const ACCENT = '#6C63FF';
+const PRIMARY = colors.primary;
+const ACCENT = colors.primary;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { backgroundColor: PRIMARY, paddingTop: 56, paddingBottom: 20, paddingHorizontal: 20 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: { backgroundColor: PRIMARY, paddingTop: 56, paddingBottom: 20, paddingHorizontal: 20, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 },
-  backText: { color: '#93C5FD', fontWeight: '600', fontSize: 14 },
+  backText: { color: '#C7D2FE', fontWeight: '600', fontSize: 14 },
   title: { fontSize: 22, fontWeight: '800', color: '#fff' },
-  subtitle: { fontSize: 12, color: '#93C5FD', marginTop: 4 },
+  subtitle: { fontSize: 12, color: '#C7D2FE', marginTop: 4 },
   content: { padding: 16 },
   label: { fontSize: 14, fontWeight: '700', color: PRIMARY, marginBottom: 8, marginTop: 8 },
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

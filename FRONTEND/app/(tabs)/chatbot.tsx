@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
 import { useAuthStore } from '@/src/store/authStore';
+import { colors, radius, shadow } from '@/src/theme';
 
 function uuidv4(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -34,15 +35,6 @@ export default function ChatbotScreen() {
   const [sending, setSending] = useState(false);
   const sessionRef = useRef<string>(uuidv4());
   const listRef = useRef<FlatList>(null);
-
-  if (user?.role !== 'eleve') {
-    return (
-      <View style={styles.centered}>
-        <Ionicons name="lock-closed" size={48} color="#9CA3AF" style={{ marginBottom: 12 }} />
-        <Text style={styles.lockText}>EduBot est réservé aux élèves.</Text>
-      </View>
-    );
-  }
 
   const send = async () => {
     const text = input.trim();
@@ -78,15 +70,30 @@ export default function ChatbotScreen() {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages]);
 
+  // Garde-fou APRÈS tous les hooks (évite « Rendered fewer hooks » à la déconnexion).
+  if (user?.role !== 'eleve') {
+    return (
+      <View style={styles.centered}>
+        <Ionicons name="lock-closed" size={48} color={colors.textLight} style={{ marginBottom: 12 }} />
+        <Text style={styles.lockText}>EduBot est réservé aux élèves.</Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
       {/* En-tête */}
       <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <Ionicons name="chatbubbles" size={22} color="#fff" />
-          <Text style={styles.headerTitle}>EduBot</Text>
+        <View style={styles.avatar}>
+          <Ionicons name="sparkles" size={20} color={colors.white} />
         </View>
-        <Text style={styles.headerSub}>Assistant pédagogique IA</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>EduBot</Text>
+          <View style={styles.statusRow}>
+            <View style={styles.dot} />
+            <Text style={styles.headerSub}>Assistant pédagogique IA</Text>
+          </View>
+        </View>
       </View>
 
       {/* Messages */}
@@ -114,7 +121,7 @@ export default function ChatbotScreen() {
               <Ionicons name="sparkles" size={11} color={ACCENT} />
               <Text style={styles.botLabel}>EduBot</Text>
             </View>
-            <ActivityIndicator size="small" color="#6C63FF" style={{ marginTop: 4 }} />
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
           </View>
         ) : null}
       />
@@ -126,7 +133,7 @@ export default function ChatbotScreen() {
           value={input}
           onChangeText={setInput}
           placeholder="Pose ta question..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.textLight}
           multiline
           maxLength={500}
           onSubmitEditing={send}
@@ -144,38 +151,46 @@ export default function ChatbotScreen() {
   );
 }
 
-const PRIMARY = '#1E3A5F';
-const ACCENT = '#6C63FF';
+const ACCENT = colors.primary;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  lockText: { fontSize: 16, color: '#6B7280', textAlign: 'center' },
-  header: { backgroundColor: PRIMARY, paddingTop: 56, paddingBottom: 16, paddingHorizontal: 20 },
-  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  lockText: { fontSize: 16, color: colors.textMuted, textAlign: 'center' },
+  header: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.primary, paddingTop: 56, paddingBottom: 16, paddingHorizontal: 20,
+    borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl, ...shadow.md,
+  },
+  avatar: {
+    width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: colors.white },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.emerald },
+  headerSub: { fontSize: 13, color: '#C7D2FE' },
   botLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 },
-  headerSub: { fontSize: 13, color: '#93C5FD', marginTop: 2 },
   messagesList: { padding: 16, paddingBottom: 8, gap: 12 },
-  bubble: { maxWidth: '80%', borderRadius: 16, padding: 12, elevation: 1 },
+  bubble: { maxWidth: '80%', borderRadius: radius.lg, padding: 12, ...shadow.sm },
   bubbleUser: { alignSelf: 'flex-end', backgroundColor: ACCENT, borderBottomRightRadius: 4 },
-  bubbleBot: { alignSelf: 'flex-start', backgroundColor: '#fff', borderBottomLeftRadius: 4 },
+  bubbleBot: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderBottomLeftRadius: 4 },
   botLabel: { fontSize: 11, fontWeight: '700', color: ACCENT, marginBottom: 4 },
-  bubbleText: { fontSize: 15, color: PRIMARY, lineHeight: 22 },
-  bubbleTextUser: { color: '#fff' },
+  bubbleText: { fontSize: 15, color: colors.text, lineHeight: 22 },
+  bubbleTextUser: { color: colors.white },
   inputRow: {
     flexDirection: 'row', alignItems: 'flex-end', padding: 12,
-    backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#F3F4F6',
+    backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
   },
   input: {
-    flex: 1, backgroundColor: '#F3F4F6', borderRadius: 20,
+    flex: 1, backgroundColor: colors.surfaceAlt, borderRadius: radius.xl,
+    borderWidth: 1.5, borderColor: colors.border,
     paddingHorizontal: 16, paddingVertical: 10, fontSize: 15,
-    color: PRIMARY, maxHeight: 100, marginRight: 8,
+    color: colors.text, maxHeight: 100, marginRight: 8,
   },
   sendBtn: {
     width: 44, height: 44, borderRadius: 22, backgroundColor: ACCENT,
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center', ...shadow.sm,
   },
-  sendBtnDisabled: { backgroundColor: '#D1D5DB' },
-  sendBtnText: { color: '#fff', fontSize: 20, fontWeight: '800' },
+  sendBtnDisabled: { backgroundColor: colors.textLight },
 });

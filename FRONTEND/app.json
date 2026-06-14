@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "EduTrack",
+    "name": "SmartSchool",
     "slug": "edutrack",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1E3A5F"
+      "backgroundColor": "#4F46E5"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -21,7 +21,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1E3A5F"
+        "backgroundColor": "#4F46E5"
       },
       "package": "cm.edutrack.app",
       "googleServicesFile": "./google-services.json",
@@ -43,7 +43,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#1E3A5F"
+          "color": "#4F46E5"
         }
       ],
       "expo-asset",
