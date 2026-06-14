@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  View, Text, StyleSheet, SectionList, TouchableOpacity,
   ActivityIndicator, RefreshControl, TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -67,6 +67,17 @@ export default function MatieresScreen() {
     c.matiere_nom?.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Regroupe les cours par matière (sections triées par nom de matière).
+  const sections = (() => {
+    const map = new Map<string, { title: string; code: string; data: Cours[] }>();
+    for (const c of filtered) {
+      const key = c.matiere_code || c.matiere_nom || 'Autres';
+      if (!map.has(key)) map.set(key, { title: c.matiere_nom || 'Autres', code: c.matiere_code || '', data: [] });
+      map.get(key)!.data.push(c);
+    }
+    return Array.from(map.values()).sort((a, b) => a.title.localeCompare(b.title));
+  })();
+
   return (
     <View style={styles.container}>
       {/* En-tête */}
@@ -99,15 +110,30 @@ export default function MatieresScreen() {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
-        <FlatList
-          data={filtered}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id_cours}
           contentContainerStyle={styles.list}
+          stickySectionHeadersEnabled={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           onEndReached={loadMore}
           onEndReachedThreshold={0.3}
           ListEmptyComponent={<EmptyState label="Aucun cours disponible pour ta classe." />}
           ListFooterComponent={loadingMore ? <ActivityIndicator style={{ margin: spacing.md }} color={colors.primary} /> : null}
+          renderSectionHeader={({ section }) => {
+            const c = subjectColor(section.code);
+            return (
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionIcon, { backgroundColor: `${c}1A` }]}>
+                  <Ionicons name={subjectIconName(section.code)} size={16} color={c} />
+                </View>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+                <View style={styles.sectionCountWrap}>
+                  <Text style={styles.sectionCount}>{section.data.length}</Text>
+                </View>
+              </View>
+            );
+          }}
           renderItem={({ item }) => {
             const color = subjectColor(item.matiere_code);
             return (
@@ -179,11 +205,16 @@ const styles = StyleSheet.create({
   },
   searchIcon: { fontSize: 16, marginRight: spacing.sm },
   searchInput: { flex: 1, fontSize: 15, color: colors.text, paddingVertical: 13 },
-  list: { padding: spacing.md, gap: 12 },
+  list: { padding: spacing.md, paddingBottom: 32 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, marginBottom: 10 },
+  sectionIcon: { width: 30, height: 30, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
+  sectionTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+  sectionCountWrap: { backgroundColor: colors.primaryLight, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
+  sectionCount: { fontSize: 12, fontWeight: '800', color: colors.primary },
   card: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14,
-    borderWidth: 1, borderColor: colors.border, ...shadow.md,
+    borderWidth: 1, borderColor: colors.border, marginBottom: 12, ...shadow.md,
   },
   iconBox: {
     width: 52, height: 52, borderRadius: radius.md,
