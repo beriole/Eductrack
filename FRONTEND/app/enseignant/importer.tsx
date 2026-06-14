@@ -8,20 +8,36 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { api } from '@/src/lib/api';
 import { colors, radius, spacing, shadow } from '@/src/theme';
+import { SYSTEMES, niveauxFor, Systeme } from '@/src/lib/niveaux';
 
-interface Matiere { id_matiere: string; nom: string; code: string; }
+interface Matiere { id_matiere: string; nom: string; code: string; niveaux: string[]; }
 
-const NIVEAUX = ['6e', '5e', '4e', '3e', '2nde', '1ere', 'Tle'];
+const TYPES = [
+  { key: 'officielle', label: 'Annale' },
+  { key: 'simulation', label: 'Simulation' },
+  { key: 'exercice', label: 'Exercice' },
+] as const;
 
 export default function ImporterAnnaleScreen() {
   const router = useRouter();
   const [matieres, setMatieres] = useState<Matiere[]>([]);
   const [fichier, setFichier] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [titre, setTitre] = useState('');
+  const [systeme, setSysteme] = useState<Systeme>('francophone');
+  const [type, setType] = useState<'officielle' | 'simulation' | 'exercice'>('officielle');
   const [idMatiere, setIdMatiere] = useState<string | null>(null);
   const [niveau, setNiveau] = useState('Tle');
   const [annee, setAnnee] = useState('');
   const [uploading, setUploading] = useState(false);
+
+  const niveaux = niveauxFor(systeme);
+  const matieresNiveau = matieres.filter((m) => !m.niveaux?.length || m.niveaux.includes(niveau));
+
+  const changerSysteme = (s: Systeme) => {
+    setSysteme(s);
+    setNiveau(niveauxFor(s)[0].v);
+    setIdMatiere(null);
+  };
 
   useEffect(() => {
     api.get('/matieres/')
@@ -47,6 +63,7 @@ export default function ImporterAnnaleScreen() {
     form.append('titre', titre.trim());
     form.append('id_matiere', idMatiere);
     form.append('niveau', niveau);
+    form.append('type_epreuve', type);
     if (annee.trim()) form.append('annee', annee.trim());
 
     setUploading(true);
@@ -77,8 +94,8 @@ export default function ImporterAnnaleScreen() {
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Importer une annale</Text>
-          <Text style={styles.subtitle}>PDF → questions extraites automatiquement</Text>
+          <Text style={styles.title}>Importer une épreuve</Text>
+          <Text style={styles.subtitle}>Annale · Simulation · Exercice — PDF → questions</Text>
         </View>
       </View>
 
@@ -102,10 +119,52 @@ export default function ImporterAnnaleScreen() {
           onChangeText={setTitre}
         />
 
-        {/* Matière */}
+        {/* Sous-système */}
+        <Text style={styles.label}>Sous-système</Text>
+        <View style={styles.chipsWrap}>
+          {SYSTEMES.map((s) => (
+            <TouchableOpacity
+              key={s.key}
+              style={[styles.chip, systeme === s.key && styles.chipActive]}
+              onPress={() => changerSysteme(s.key)}
+            >
+              <Text style={[styles.chipText, systeme === s.key && styles.chipTextActive]}>{s.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Type d'épreuve */}
+        <Text style={styles.label}>Type</Text>
+        <View style={styles.chipsWrap}>
+          {TYPES.map((t) => (
+            <TouchableOpacity
+              key={t.key}
+              style={[styles.chip, type === t.key && styles.chipActive]}
+              onPress={() => setType(t.key)}
+            >
+              <Text style={[styles.chipText, type === t.key && styles.chipTextActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Niveau */}
+        <Text style={styles.label}>Niveau</Text>
+        <View style={styles.chipsWrap}>
+          {niveaux.map((n) => (
+            <TouchableOpacity
+              key={n.v}
+              style={[styles.chip, niveau === n.v && styles.chipActive]}
+              onPress={() => { setNiveau(n.v); setIdMatiere(null); }}
+            >
+              <Text style={[styles.chipText, niveau === n.v && styles.chipTextActive]}>{n.l}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Matière (filtrée par niveau) */}
         <Text style={styles.label}>Matière</Text>
         <View style={styles.chipsWrap}>
-          {matieres.map((m) => (
+          {matieresNiveau.map((m) => (
             <TouchableOpacity
               key={m.id_matiere}
               style={[styles.chip, idMatiere === m.id_matiere && styles.chipActive]}
@@ -115,20 +174,9 @@ export default function ImporterAnnaleScreen() {
             </TouchableOpacity>
           ))}
           {matieres.length === 0 && <Text style={styles.muted}>Chargement des matières…</Text>}
-        </View>
-
-        {/* Niveau */}
-        <Text style={styles.label}>Niveau</Text>
-        <View style={styles.chipsWrap}>
-          {NIVEAUX.map((n) => (
-            <TouchableOpacity
-              key={n}
-              style={[styles.chip, niveau === n && styles.chipActive]}
-              onPress={() => setNiveau(n)}
-            >
-              <Text style={[styles.chipText, niveau === n && styles.chipTextActive]}>{n}</Text>
-            </TouchableOpacity>
-          ))}
+          {matieres.length > 0 && matieresNiveau.length === 0 && (
+            <Text style={styles.muted}>Aucune matière pour ce niveau.</Text>
+          )}
         </View>
 
         {/* Année (optionnel) */}

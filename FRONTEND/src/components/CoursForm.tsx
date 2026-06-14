@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator 
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
 import { colors, radius, spacing, shadow } from '@/src/theme';
+import { SYSTEMES, niveauxFor, Systeme } from '@/src/lib/niveaux';
 
 export interface CoursData {
   titre: string;
@@ -14,8 +15,10 @@ export interface CoursData {
 
 interface Matiere { id_matiere: string; nom: string; code: string; niveaux: string[]; }
 
-const NIVEAUX = ['6e', '5e', '4e', '3e', '2nde', '1ere', 'Tle'];
-const SERIES = ['A1', 'A4', 'C', 'D', 'E', 'TI', 'G'];
+const SERIES = ['A1', 'A4', 'C', 'D', 'E', 'TI', 'G', 'Science', 'Arts', 'Commercial'];
+
+const inferSysteme = (niv?: string): Systeme =>
+  niv && /^(Form|LowerSixth|UpperSixth)/.test(niv) ? 'anglophone' : 'francophone';
 
 export function CoursForm({
   initial, submitting, submitLabel, onSubmit,
@@ -26,7 +29,9 @@ export function CoursForm({
   onSubmit: (data: CoursData) => void;
 }) {
   const [matieres, setMatieres] = useState<Matiere[]>([]);
+  const [systeme, setSysteme] = useState<Systeme>(inferSysteme(initial?.niveau));
   const [niveau, setNiveau] = useState(initial?.niveau ?? 'Tle');
+  const niveaux = niveauxFor(systeme);
   const [serie, setSerie] = useState<string | null>(initial?.serie ?? null);
   const [idMatiere, setIdMatiere] = useState<string>(initial?.id_matiere ?? '');
   const [titre, setTitre] = useState(initial?.titre ?? '');
@@ -47,8 +52,24 @@ export function CoursForm({
 
   return (
     <View>
+      <Label>Sous-système</Label>
+      <View style={styles.chipsWrap}>
+        {SYSTEMES.map((s) => (
+          <Chip
+            key={s.key}
+            label={s.label}
+            active={systeme === s.key}
+            onPress={() => { setSysteme(s.key); setNiveau(niveauxFor(s.key)[0].v); setIdMatiere(''); }}
+          />
+        ))}
+      </View>
+
       <Label>Niveau</Label>
-      <Chips items={NIVEAUX} value={niveau} onPick={(v) => setNiveau(v)} />
+      <View style={styles.chipsWrap}>
+        {niveaux.map((n) => (
+          <Chip key={n.v} label={n.l} active={niveau === n.v} onPress={() => setNiveau(n.v)} />
+        ))}
+      </View>
 
       <Label>Matière</Label>
       <View style={styles.chipsWrap}>
@@ -108,14 +129,6 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
     </TouchableOpacity>
   );
 }
-function Chips({ items, value, onPick }: { items: string[]; value: string; onPick: (v: string) => void }) {
-  return (
-    <View style={styles.chipsWrap}>
-      {items.map((it) => <Chip key={it} label={it} active={value === it} onPress={() => onPick(it)} />)}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '800', color: colors.textMuted, marginBottom: 8, marginTop: 14 },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

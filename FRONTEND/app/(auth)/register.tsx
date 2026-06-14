@@ -8,6 +8,7 @@ import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/src/store/authStore';
 import { colors, radius } from '@/src/theme';
+import { SYSTEMES, niveauxFor } from '@/src/lib/niveaux';
 
 const ROLES = [
   { key: 'eleve', label: 'Élève' },
@@ -15,21 +16,6 @@ const ROLES = [
   { key: 'enseignant', label: 'Enseignant' },
 ] as const;
 
-const SYSTEMES = [
-  { key: 'francophone', label: 'Francophone' },
-  { key: 'anglophone', label: 'Anglophone' },
-] as const;
-
-// Niveaux par sous-système (valeur backend / libellé affiché).
-const NIVEAUX_FR = [
-  { v: '6e', l: '6e' }, { v: '5e', l: '5e' }, { v: '4e', l: '4e' }, { v: '3e', l: '3e' },
-  { v: '2nde', l: '2nde' }, { v: '1ere', l: '1ère' }, { v: 'Tle', l: 'Tle' },
-];
-const NIVEAUX_EN = [
-  { v: 'Form1', l: 'Form 1' }, { v: 'Form2', l: 'Form 2' }, { v: 'Form3', l: 'Form 3' },
-  { v: 'Form4', l: 'Form 4' }, { v: 'Form5', l: 'Form 5' },
-  { v: 'LowerSixth', l: 'Lower Sixth' }, { v: 'UpperSixth', l: 'Upper Sixth' },
-];
 const REGIONS = [
   'Adamaoua', 'Centre', 'Est', 'Extrême-Nord', 'Littoral',
   'Nord', 'Nord-Ouest', 'Ouest', 'Sud', 'Sud-Ouest',
@@ -55,7 +41,7 @@ export default function RegisterScreen() {
   const [niveauIndex, setNiveauIndex] = useState<number | null>(null);
   const [regionIndex, setRegionIndex] = useState(1); // Centre par défaut
 
-  const niveaux = systeme === 'anglophone' ? NIVEAUX_EN : NIVEAUX_FR;
+  const niveaux = niveauxFor(systeme);
 
   const handleNext = () => {
     if (!nom.trim() || !prenom.trim() || !email.trim()) {
