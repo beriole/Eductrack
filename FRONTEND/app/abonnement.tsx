@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
+import { colors, radius } from '@/src/theme';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -46,7 +47,7 @@ const FORMULES = [
     icon: 'rocket' as IoniconName,
     prix: { mensuel: 5000, trimestriel: 13000, annuel: 48000 },
     features: ['Tout Standard', 'Épreuves illimitées', 'Suivi parental avancé', 'Orientation scolaire'],
-    couleur: '#7C3AED',
+    couleur: colors.primary,
   },
   {
     key: 'pro',
@@ -127,7 +128,7 @@ export default function AbonnementScreen() {
   };
 
   if (loading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color="#7C3AED" /></View>;
+    return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   const formuleActuelle = actif?.formule ?? 'basic';
@@ -137,7 +138,7 @@ export default function AbonnementScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backRow}>
-          <Ionicons name="arrow-back" size={18} color="#93C5FD" />
+          <Ionicons name="arrow-back" size={18} color="#C7D2FE" />
           <Text style={styles.backText}>Retour</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Abonnements</Text>
@@ -253,8 +254,8 @@ export default function AbonnementScreen() {
       {transId && (
         <TouchableOpacity style={styles.verifyBtn} onPress={() => pollStatut(transId)} disabled={polling}>
           {polling
-            ? <ActivityIndicator color="#7C3AED" />
-            : <View style={styles.verifyBtnInner}><Ionicons name="refresh" size={16} color="#7C3AED" /><Text style={styles.verifyBtnText}>Vérifier le paiement</Text></View>
+            ? <ActivityIndicator color={colors.primary} />
+            : <View style={styles.verifyBtnInner}><Ionicons name="refresh" size={16} color={colors.primary} /><Text style={styles.verifyBtnText}>Vérifier le paiement</Text></View>
           }
         </TouchableOpacity>
       )}
@@ -264,24 +265,24 @@ export default function AbonnementScreen() {
   );
 }
 
-const PRIMARY = '#1E3A5F';
+const PRIMARY = colors.primary;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: colors.bg },
   inner: { paddingBottom: 32 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: PRIMARY, paddingTop: 56, paddingBottom: 24, paddingHorizontal: 20 },
+  header: { backgroundColor: PRIMARY, paddingTop: 56, paddingBottom: 24, paddingHorizontal: 20, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 },
-  backText: { color: '#93C5FD', fontWeight: '600', fontSize: 14 },
+  backText: { color: '#C7D2FE', fontWeight: '600', fontSize: 14 },
   title: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  subtitle: { fontSize: 13, color: '#93C5FD', marginTop: 4 },
+  subtitle: { fontSize: 13, color: '#C7D2FE', marginTop: 4 },
   activeBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#D1FAE5', margin: 16, borderRadius: 12, padding: 12 },
   activeBannerText: { color: '#065F46', fontWeight: '600', fontSize: 13, textAlign: 'center' },
   periodiciteRow: { flexDirection: 'row', margin: 16, gap: 8 },
   periodeBtn: { flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E5E7EB', alignItems: 'center' },
-  periodeBtnActive: { borderColor: '#7C3AED', backgroundColor: '#F5F3FF' },
+  periodeBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
   periodeBtnText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  periodeBtnTextActive: { color: '#7C3AED' },
+  periodeBtnTextActive: { color: colors.primary },
   reductionTag: { fontSize: 10, color: '#10B981', fontWeight: '700', marginTop: 2 },
   card: { backgroundColor: '#fff', borderRadius: 16, marginHorizontal: 16, marginBottom: 12, padding: 16, borderWidth: 1.5, borderColor: '#E5E7EB', elevation: 1 },
   cardActuel: { borderColor: '#10B981', backgroundColor: '#F0FDF4' },
@@ -302,10 +303,10 @@ const styles = StyleSheet.create({
   phoneSectionLabel: { fontSize: 14, fontWeight: '700', color: PRIMARY, marginBottom: 8 },
   phoneInput: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1.5, borderColor: '#E5E7EB', paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: PRIMARY },
   phoneHint: { fontSize: 12, color: '#9CA3AF', marginTop: 6 },
-  subscribeBtn: { backgroundColor: '#7C3AED', borderRadius: 14, marginHorizontal: 16, paddingVertical: 16, alignItems: 'center', marginBottom: 12 },
+  subscribeBtn: { backgroundColor: colors.primary, borderRadius: 14, marginHorizontal: 16, paddingVertical: 16, alignItems: 'center', marginBottom: 12 },
   subscribeBtnLoading: { backgroundColor: '#9CA3AF' },
   subscribeBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  verifyBtn: { borderWidth: 1.5, borderColor: '#7C3AED', borderRadius: 14, marginHorizontal: 16, paddingVertical: 14, alignItems: 'center', marginBottom: 12 },
+  verifyBtn: { borderWidth: 1.5, borderColor: colors.primary, borderRadius: 14, marginHorizontal: 16, paddingVertical: 14, alignItems: 'center', marginBottom: 12 },
   verifyBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  verifyBtnText: { color: '#7C3AED', fontWeight: '700', fontSize: 15 },
+  verifyBtnText: { color: colors.primary, fontWeight: '700', fontSize: 15 },
 });
