@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  View, Text, StyleSheet, SectionList, TouchableOpacity,
   ActivityIndicator, RefreshControl, Modal, Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -9,7 +9,7 @@ import { api } from '@/src/lib/api';
 import { useAuthStore } from '@/src/store/authStore';
 import { PdfViewButton } from '@/src/components/Pdf';
 import { StarRating } from '@/src/components/Feedback';
-import { colors, radius, spacing, shadow } from '@/src/theme';
+import { colors, radius, spacing, shadow, subjectColor, subjectIconName } from '@/src/theme';
 
 interface Epreuve {
   id_epreuve: string;
@@ -88,6 +88,17 @@ export default function ExamensScreen() {
     router.push(`/sessions/nouvelle?epreuveId=${ep.id_epreuve}&mode=${mode}&duree=${ep.duree_minutes}`);
   };
 
+  // Regroupe les épreuves par matière (sections triées par nom de matière).
+  const sections = (() => {
+    const map = new Map<string, { title: string; code: string; data: Epreuve[] }>();
+    for (const e of epreuves) {
+      const key = e.matiere_code || e.matiere_nom || 'Autres';
+      if (!map.has(key)) map.set(key, { title: e.matiere_nom || 'Autres', code: e.matiere_code || '', data: [] });
+      map.get(key)!.data.push(e);
+    }
+    return Array.from(map.values()).sort((a, b) => a.title.localeCompare(b.title));
+  })();
+
   return (
     <View style={styles.container}>
       {/* En-tête */}
@@ -119,11 +130,12 @@ export default function ExamensScreen() {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
-        <FlatList
-          data={epreuves}
+        <SectionList
+          sections={sections}
           keyExtractor={(e) => e.id_epreuve}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          stickySectionHeadersEnabled={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           ListEmptyComponent={
             <View style={styles.centered}>
@@ -131,6 +143,20 @@ export default function ExamensScreen() {
               <Text style={styles.emptyText}>Aucune épreuve pour ta classe.</Text>
             </View>
           }
+          renderSectionHeader={({ section }) => {
+            const c = subjectColor(section.code);
+            return (
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionIcon, { backgroundColor: `${c}15` }]}>
+                  <Ionicons name={subjectIconName(section.code)} size={16} color={c} />
+                </View>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+                <View style={styles.sectionCountWrap}>
+                  <Text style={styles.sectionCount}>{section.data.length}</Text>
+                </View>
+              </View>
+            );
+          }}
           renderItem={({ item }) => {
             const meta = TYPE_META[item.type_epreuve] ?? { label: item.type_epreuve, color: colors.textMuted, icon: 'document-outline' as IconName };
             return (
@@ -253,10 +279,18 @@ const styles = StyleSheet.create({
   favPillActive: { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' },
   favPillText: { fontSize: 12.5, fontWeight: '700', color: colors.textMuted },
 
-  list: { padding: spacing.md, gap: 12 },
+  list: { padding: spacing.md, paddingBottom: 32 },
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: 14, marginBottom: 10,
+  },
+  sectionIcon: { width: 30, height: 30, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
+  sectionTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+  sectionCountWrap: { backgroundColor: colors.primaryLight, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
+  sectionCount: { fontSize: 12, fontWeight: '800', color: colors.primary },
   card: {
     flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface,
-    borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, ...shadow.sm,
+    borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginBottom: 12, ...shadow.sm,
   },
   iconWrap: { width: 46, height: 46, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center' },
   cardBody: { flex: 1 },

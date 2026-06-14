@@ -76,7 +76,7 @@ class Command(BaseCommand):
     def _ensure_matieres(self):
         base = [
             ('Mathématiques', 'MATH', 7),
-            ('Physique-Chimie', 'PHYS', 6),
+            ('Physique-Chimie', 'PHY', 6),
             ('Sciences de la Vie et de la Terre', 'SVT', 6),
             ('Français', 'FRAN', 4),
         ]
@@ -151,7 +151,7 @@ class Command(BaseCommand):
     def _creer_cours(self, prof, matieres):
         cours_data = [
             ('MATH', 'Les fonctions numériques', 'Étude des limites, continuité et dérivabilité.'),
-            ('PHYS', 'Les ondes mécaniques', 'Propagation, célérité et phénomènes vibratoires.'),
+            ('PHY', 'Les ondes mécaniques', 'Propagation, célérité et phénomènes vibratoires.'),
             ('SVT', 'La transmission de la vie', "Méiose, brassage génétique et hérédité."),
         ]
         for code, titre, contenu in cours_data:
@@ -169,7 +169,7 @@ class Command(BaseCommand):
         epreuves = {}
         specs = [
             ('MATH', 'BAC Blanc Mathématiques — Série D', 'simulation'),
-            ('PHYS', 'Épreuve Physique-Chimie 2023', 'officielle'),
+            ('PHY', 'Épreuve Physique-Chimie 2023', 'officielle'),
             ('SVT', 'Contrôle SVT — Génétique', 'exercice'),
         ]
         for code, titre, type_ep in specs:
@@ -228,15 +228,15 @@ class Command(BaseCommand):
             diag = Diagnostics.objects.create(
                 id_eleve=eleve,
                 score_global=62.0,
-                scores_par_matiere={'MATH': 70, 'PHYS': 55, 'SVT': 48, 'FRAN': 75},
-                matieres_testees=['MATH', 'PHYS', 'SVT', 'FRAN'],
+                scores_par_matiere={'MATH': 70, 'PHY': 55, 'SVT': 48, 'FRAN': 75},
+                matieres_testees=['MATH', 'PHY', 'SVT', 'FRAN'],
                 parcours_genere=True, nb_lacunes_detectees=3,
             )
         return diag
 
     def _creer_lacunes(self, eleve, matieres, diagnostic):
         data = [
-            ('PHYS', 'Électromagnétisme', "Loi de Lenz-Faraday", 45, 'detectee'),
+            ('PHY', 'Électromagnétisme', "Loi de Lenz-Faraday", 45, 'detectee'),
             ('SVT', 'Génétique', "Brassage interchromosomique", 38, 'en_cours'),
             ('MATH', 'Analyse', "Étude de fonctions exponentielles", 58, 'en_cours'),
             ('MATH', 'Probabilités', "Lois de probabilité continues", 82, 'maitrisee'),
@@ -277,9 +277,9 @@ class Command(BaseCommand):
             id_eleve=eleve, semaine_debut=lundi,
             disponibilites={'lundi': ['18:00', '20:00'], 'mercredi': ['16:00', '18:00'],
                             'samedi': ['09:00', '12:00']},
-            priorites_matieres=['PHYS', 'SVT', 'MATH'], actif=True, nb_sessions=3,
+            priorites_matieres=['PHY', 'SVT', 'MATH'], actif=True, nb_sessions=3,
         )
-        codes = ['PHYS', 'SVT', 'MATH']
+        codes = ['PHY', 'SVT', 'MATH']
         offsets = [(0, 18), (2, 16), (5, 9)]
         for code, (day_offset, hour) in zip(codes, offsets):
             date_h = timezone.make_aware(
@@ -291,5 +291,5 @@ class Command(BaseCommand):
             SessionsEtude.objects.create(
                 id_planning=planning, id_matiere=matieres[code],
                 date_heure=date_h, duree_minutes=90,
-                objectif=f"Réviser {matieres[code].nom}", completee=(code == 'PHYS'),
+                objectif=f"Réviser {matieres[code].nom}", completee=(code == 'PHY'),
             )
