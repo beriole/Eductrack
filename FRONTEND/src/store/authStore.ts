@@ -24,6 +24,7 @@ export interface User {
   email_verifie: boolean;
   telephone?: string;
   // Élève spécifique
+  systeme?: 'francophone' | 'anglophone';
   niveau_scolaire?: string;
   serie?: string;
   region?: string;
@@ -42,6 +43,7 @@ export interface RegisterData {
   telephone?: string;
   role: 'eleve' | 'parent' | 'enseignant';
   // Champs élève
+  systeme?: 'francophone' | 'anglophone';
   niveau_scolaire?: string;
   region?: string;
   serie?: string;

@@ -63,18 +63,41 @@ export const spacing = {
  * écrans cours, sélection et planning. La clé est le `code` matière (ex. MATH).
  */
 const SUBJECT_THEME: Record<string, { color: string; icon: IoniconName }> = {
-  MATH: { color: '#6366F1', icon: 'calculator' },
-  PHY:  { color: '#3B82F6', icon: 'magnet' },
-  CHI:  { color: '#06B6D4', icon: 'flask' },
-  SVT:  { color: '#10B981', icon: 'leaf' },
-  INFO: { color: '#0EA5E9', icon: 'code-slash' },
+  // ── Francophone (MINESEC) ──
   FRAN: { color: '#8B5CF6', icon: 'book' },
   ANGL: { color: '#14B8A6', icon: 'language' },
-  PHIL: { color: '#D97706', icon: 'bulb' },
+  MATH: { color: '#6366F1', icon: 'calculator' },
+  SVT:  { color: '#10B981', icon: 'leaf' },
+  PHY:  { color: '#3B82F6', icon: 'magnet' },
+  CHI:  { color: '#06B6D4', icon: 'flask' },
+  PCT:  { color: '#0EA5E9', icon: 'flask' },
+  HG:   { color: '#F59E0B', icon: 'earth' },
   HIS:  { color: '#F59E0B', icon: 'time' },
   GEO:  { color: '#EF4444', icon: 'earth' },
   ECM:  { color: '#F43F5E', icon: 'people' },
+  PHIL: { color: '#D97706', icon: 'bulb' },
   ECO:  { color: '#22C55E', icon: 'stats-chart' },
+  INFO: { color: '#0EA5E9', icon: 'code-slash' },
+  ESP:  { color: '#E11D48', icon: 'language' },
+  ALL:  { color: '#7C3AED', icon: 'language' },
+  EPS:  { color: '#16A34A', icon: 'barbell' },
+  // ── Anglophone (GCE Board) ──
+  ENG:      { color: '#14B8A6', icon: 'language' },
+  LITE:     { color: '#A855F7', icon: 'library' },
+  FRE:      { color: '#8B5CF6', icon: 'book' },
+  MATH_EN:  { color: '#6366F1', icon: 'calculator' },
+  FMATH_EN: { color: '#4338CA', icon: 'calculator' },
+  BIO:      { color: '#10B981', icon: 'leaf' },
+  CHEM:     { color: '#06B6D4', icon: 'flask' },
+  PHY_EN:   { color: '#3B82F6', icon: 'magnet' },
+  CSC:      { color: '#0EA5E9', icon: 'code-slash' },
+  HIST:     { color: '#F59E0B', icon: 'time' },
+  GEOG:     { color: '#EF4444', icon: 'earth' },
+  ECON:     { color: '#22C55E', icon: 'stats-chart' },
+  CITZ:     { color: '#F43F5E', icon: 'people' },
+  COMM:     { color: '#0891B2', icon: 'cart' },
+  ACCT:     { color: '#65A30D', icon: 'calculator' },
+  RELS:     { color: '#9333EA', icon: 'heart' },
 };
 
 const FALLBACK_SUBJECT: { color: string; icon: IoniconName } = { color: '#64748B', icon: 'library' };

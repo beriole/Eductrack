@@ -84,7 +84,12 @@ class Matieres(models.Model):
 
 class Eleves(Utilisateur):
     """Modèle représentant les élèves, contenant les informations de scolarité et gamification."""
+    SYSTEME_CHOICES = [
+        ('francophone', 'Francophone'),
+        ('anglophone', 'Anglophone'),
+    ]
     NIVEAU_CHOICES = [
+        # ── Sous-système francophone (MINESEC) ──
         ('6e', '6ème'),
         ('5e', '5ème'),
         ('4e', '4ème'),
@@ -92,9 +97,18 @@ class Eleves(Utilisateur):
         ('2nde', 'Seconde'),
         ('1ere', 'Première'),
         ('Tle', 'Terminale'),
+        # ── Sous-système anglophone (GCE Board) ──
+        ('Form1', 'Form 1'),
+        ('Form2', 'Form 2'),
+        ('Form3', 'Form 3'),
+        ('Form4', 'Form 4'),
+        ('Form5', 'Form 5'),
+        ('LowerSixth', 'Lower Sixth'),
+        ('UpperSixth', 'Upper Sixth'),
         ('Univ', 'Université'),
     ]
     SERIE_CHOICES = [
+        # Francophone (second cycle)
         ('A1', 'A1'),
         ('A4', 'A4'),
         ('C', 'C'),
@@ -102,6 +116,10 @@ class Eleves(Utilisateur):
         ('E', 'E'),
         ('TI', 'TI'),
         ('G', 'G'),
+        # Anglophone (GCE A-Level)
+        ('Science', 'Science'),
+        ('Arts', 'Arts'),
+        ('Commercial', 'Commercial'),
     ]
     REGION_CHOICES = [
         ('Adamaoua', 'Adamaoua'),
@@ -116,8 +134,9 @@ class Eleves(Utilisateur):
         ('Sud-Ouest', 'Sud-Ouest'),
     ]
 
-    niveau_scolaire = models.CharField(max_length=10, choices=NIVEAU_CHOICES)
-    serie = models.CharField(max_length=10, choices=SERIE_CHOICES, blank=True, null=True)
+    systeme = models.CharField(max_length=12, choices=SYSTEME_CHOICES, default='francophone')
+    niveau_scolaire = models.CharField(max_length=12, choices=NIVEAU_CHOICES)
+    serie = models.CharField(max_length=12, choices=SERIE_CHOICES, blank=True, null=True)
     region = models.CharField(max_length=50, choices=REGION_CHOICES)
     ville = models.CharField(max_length=80, blank=True, null=True)
     etablissement = models.CharField(max_length=150, blank=True, null=True)

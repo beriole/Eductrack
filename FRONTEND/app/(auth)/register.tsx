@@ -15,7 +15,21 @@ const ROLES = [
   { key: 'enseignant', label: 'Enseignant' },
 ] as const;
 
-const NIVEAUX = ['6e', '5e', '4e', '3e', '2nde', '1ere', 'Tle', 'Univ'];
+const SYSTEMES = [
+  { key: 'francophone', label: 'Francophone' },
+  { key: 'anglophone', label: 'Anglophone' },
+] as const;
+
+// Niveaux par sous-système (valeur backend / libellé affiché).
+const NIVEAUX_FR = [
+  { v: '6e', l: '6e' }, { v: '5e', l: '5e' }, { v: '4e', l: '4e' }, { v: '3e', l: '3e' },
+  { v: '2nde', l: '2nde' }, { v: '1ere', l: '1ère' }, { v: 'Tle', l: 'Tle' },
+];
+const NIVEAUX_EN = [
+  { v: 'Form1', l: 'Form 1' }, { v: 'Form2', l: 'Form 2' }, { v: 'Form3', l: 'Form 3' },
+  { v: 'Form4', l: 'Form 4' }, { v: 'Form5', l: 'Form 5' },
+  { v: 'LowerSixth', l: 'Lower Sixth' }, { v: 'UpperSixth', l: 'Upper Sixth' },
+];
 const REGIONS = [
   'Adamaoua', 'Centre', 'Est', 'Extrême-Nord', 'Littoral',
   'Nord', 'Nord-Ouest', 'Ouest', 'Sud', 'Sud-Ouest',
@@ -37,8 +51,11 @@ export default function RegisterScreen() {
   const [role, setRole] = useState<'eleve' | 'parent' | 'enseignant'>('eleve');
 
   // Champs élève — la classe doit être choisie explicitement (aucune présélection).
+  const [systeme, setSysteme] = useState<'francophone' | 'anglophone'>('francophone');
   const [niveauIndex, setNiveauIndex] = useState<number | null>(null);
   const [regionIndex, setRegionIndex] = useState(1); // Centre par défaut
+
+  const niveaux = systeme === 'anglophone' ? NIVEAUX_EN : NIVEAUX_FR;
 
   const handleNext = () => {
     if (!nom.trim() || !prenom.trim() || !email.trim()) {
@@ -76,7 +93,8 @@ export default function RegisterScreen() {
         password,
         role,
         ...(role === 'eleve' && niveauIndex !== null && {
-          niveau_scolaire: NIVEAUX[niveauIndex],
+          systeme,
+          niveau_scolaire: niveaux[niveauIndex].v,
           region: REGIONS[regionIndex],
         }),
       });
@@ -165,15 +183,30 @@ export default function RegisterScreen() {
             {/* Champs élève */}
             {role === 'eleve' && (
               <>
+                <Text style={styles.label}>Sous-système</Text>
+                <View style={styles.roleRow}>
+                  {SYSTEMES.map((s) => (
+                    <TouchableOpacity
+                      key={s.key}
+                      style={[styles.roleBtn, systeme === s.key && styles.roleBtnActive]}
+                      onPress={() => { setSysteme(s.key); setNiveauIndex(null); }}
+                    >
+                      <Text style={[styles.roleBtnText, systeme === s.key && styles.roleBtnTextActive]}>
+                        {s.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
                 <Text style={styles.label}>Choisis ta classe *</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-                  {NIVEAUX.map((n, i) => (
+                  {niveaux.map((n, i) => (
                     <TouchableOpacity
-                      key={n}
+                      key={n.v}
                       style={[styles.chip, niveauIndex === i && styles.chipActive]}
                       onPress={() => setNiveauIndex(i)}
                     >
-                      <Text style={[styles.chipText, niveauIndex === i && styles.chipTextActive]}>{n}</Text>
+                      <Text style={[styles.chipText, niveauIndex === i && styles.chipTextActive]}>{n.l}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>

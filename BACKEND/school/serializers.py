@@ -56,7 +56,7 @@ class UtilisateurSerializer(serializers.ModelSerializer):
 class EleveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Eleves
-        fields = UtilisateurSerializer.Meta.fields + ['niveau_scolaire', 'serie', 'region', 'ville', 'etablissement', 'date_naissance', 'score_global', 'streak_jours', 'points_gamification', 'mode_hors_ligne', 'date_diagnostic']
+        fields = UtilisateurSerializer.Meta.fields + ['systeme', 'niveau_scolaire', 'serie', 'region', 'ville', 'etablissement', 'date_naissance', 'score_global', 'streak_jours', 'points_gamification', 'mode_hors_ligne', 'date_diagnostic']
         read_only_fields = UtilisateurSerializer.Meta.read_only_fields + ['score_global', 'streak_jours', 'points_gamification', 'date_diagnostic']
 
 class ParentSerializer(serializers.ModelSerializer):
@@ -80,6 +80,7 @@ class RegisterSerializer(serializers.Serializer):
     langue = serializers.ChoiceField(choices=Utilisateur.LANGUE_CHOICES, default='fr')
     
     # Eleve specific
+    systeme = serializers.ChoiceField(choices=Eleves.SYSTEME_CHOICES, required=False, default='francophone')
     niveau_scolaire = serializers.ChoiceField(choices=Eleves.NIVEAU_CHOICES, required=False)
     serie = serializers.ChoiceField(choices=Eleves.SERIE_CHOICES, required=False, allow_blank=True)
     region = serializers.ChoiceField(choices=Eleves.REGION_CHOICES, required=False)
@@ -113,6 +114,7 @@ class RegisterSerializer(serializers.Serializer):
             user = Eleves.objects.create_user(
                 **user_data,
                 password=validated_data['password'],
+                systeme=validated_data.get('systeme', 'francophone'),
                 niveau_scolaire=validated_data['niveau_scolaire'],
                 serie=validated_data.get('serie', ''),
                 region=validated_data['region']
