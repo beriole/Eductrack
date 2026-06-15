@@ -70,6 +70,9 @@ export default function VerifyEmailScreen() {
     <View style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <TouchableOpacity style={styles.back} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={20} color={colors.text} />
+          </TouchableOpacity>
           <View style={styles.logoBadge}>
             <Ionicons name="mail-open" size={30} color={colors.white} />
           </View>
@@ -122,6 +125,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
   scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 22, paddingVertical: 40 },
+  back: { position: 'absolute', top: 16, left: 4, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   logoBadge: {
     width: 64, height: 64, borderRadius: 20, backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center', alignSelf: 'center', ...shadow.lg,

@@ -108,7 +108,7 @@ export default function DashboardScreen() {
         prenom={user?.prenom}
         subtitle={t('dashboard.subtitle')}
         right={!user?.email_verifie ? (
-          <TouchableOpacity style={styles.verifyChip} onPress={() => router.push('/(auth)/verify-email')}>
+          <TouchableOpacity style={styles.verifyChip} onPress={() => router.push('/verify-email')}>
             <Ionicons name="warning-outline" size={13} color={colors.warning} />
             <Text style={styles.verifyChipText}>Vérifier l'email</Text>
           </TouchableOpacity>

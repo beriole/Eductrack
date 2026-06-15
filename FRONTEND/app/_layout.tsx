@@ -59,6 +59,7 @@ function RootLayoutNav() {
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="redaction" />
       <Stack.Screen name="concours" />
+      <Stack.Screen name="verify-email" />
     </Stack>
   );
 }

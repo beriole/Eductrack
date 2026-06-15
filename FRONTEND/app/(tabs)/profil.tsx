@@ -148,7 +148,7 @@ export default function ProfilScreen() {
 
       {/* Bannière email non vérifié */}
       {!user.email_verifie && (
-        <TouchableOpacity style={styles.verifyBanner} onPress={() => router.push('/(auth)/verify-email')}>
+        <TouchableOpacity style={styles.verifyBanner} onPress={() => router.push('/verify-email')}>
           <Ionicons name="warning" size={16} color="#92400E" />
           <Text style={styles.verifyText}>Email non vérifié — appuie pour vérifier</Text>
           <Ionicons name="chevron-forward" size={14} color="#92400E" />
