@@ -2,6 +2,8 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import models
 from school.models import Cours, Enseignants, Eleves
@@ -12,6 +14,8 @@ from django.conf import settings
 class CoursListView(generics.ListCreateAPIView):
     serializer_class = CoursSerializer
     permission_classes = [IsAuthenticated]
+    # Accepte le JSON (cours rédigé) et le multipart (cours importé en PDF).
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['id_matiere', 'niveau', 'serie', 'statut']
 
@@ -40,7 +44,18 @@ class CoursListView(generics.ListCreateAPIView):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Seuls les enseignants peuvent créer des cours.")
         enseignant = Enseignants.objects.get(id_utilisateur=user.id_utilisateur)
-        serializer.save(id_enseignant=enseignant, statut='brouillon')
+
+        # Un cours doit avoir au moins un contenu : texte rédigé OU document PDF.
+        contenu = (serializer.validated_data.get('contenu') or '').strip()
+        fichier_pdf = serializer.validated_data.get('fichier_pdf')
+        if not contenu and not fichier_pdf:
+            raise ValidationError(
+                {"contenu": "Fournis le texte du cours ou un fichier PDF."})
+        # Cours uniquement en PDF : on pose un contenu par défaut (champ NOT NULL).
+        if not contenu and fichier_pdf:
+            contenu = "Cours disponible au format PDF — consulte le document joint."
+
+        serializer.save(id_enseignant=enseignant, statut='brouillon', contenu=contenu)
 
 class CoursDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Cours.objects.all()

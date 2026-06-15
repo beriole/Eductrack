@@ -30,6 +30,9 @@ EN_ARTS = ['Arts']
 EN_COMM = ['Commercial']
 EN_ALL_SERIES = ['Science', 'Arts', 'Commercial']
 
+# Langues vivantes II : introduites en 4e, poursuivies jusqu'en Tle (séries littéraires au 2nd cycle).
+FR_LV2 = ['4e', '3e', '2nde', '1ere', 'Tle']
+
 # (nom, code, langue, niveaux, series, coefficient_max)
 MATIERES_DATA = [
     # ─────────────────────── FRANCOPHONE (MINESEC) ───────────────────────
@@ -45,8 +48,13 @@ MATIERES_DATA = [
     ('Philosophie', 'PHIL', 'fr', ['1ere', 'Tle'], FR_TOUTES, 4),
     ('Sciences Économiques et Sociales', 'ECO', 'fr', FR_SECOND, ['A4', 'G'], 4),
     ('Informatique', 'INFO', 'fr', FR_ALL, FR_TOUTES, 4),
-    ('Espagnol', 'ESP', 'fr', ['4e', '3e', '2nde', '1ere', 'Tle'], FR_LIT, 2),
-    ('Allemand', 'ALL', 'fr', ['4e', '3e', '2nde', '1ere', 'Tle'], FR_LIT, 2),
+    ('Espagnol', 'ESP', 'fr', FR_LV2, FR_LIT, 2),
+    ('Allemand', 'ALL', 'fr', FR_LV2, FR_LIT, 2),
+    ('Chinois', 'CHIN', 'fr', FR_LV2, FR_LIT, 2),
+    ('Arabe', 'ARAB', 'fr', FR_LV2, FR_LIT, 2),
+    ('Latin', 'LATIN', 'fr', ['2nde', '1ere', 'Tle'], FR_LIT, 2),
+    ('Langues et Cultures Nationales', 'LCN', 'fr', FR_PREMIER, [], 1),
+    ('Éducation Artistique', 'ART', 'fr', FR_PREMIER, [], 1),
     ('Éducation Physique et Sportive', 'EPS', 'fr', FR_ALL, FR_TOUTES, 1),
 
     # ─────────────────────── ANGLOPHONE (GCE Board) ──────────────────────
@@ -65,6 +73,8 @@ MATIERES_DATA = [
     ('Citizenship Education', 'CITZ', 'en', EN_OLEVEL, [], 1),
     ('Commerce', 'COMM', 'en', ['Form4', 'Form5'] + EN_ALEVEL, EN_COMM, 3),
     ('Accounting', 'ACCT', 'en', ['Form4', 'Form5'] + EN_ALEVEL, EN_COMM, 4),
+    ('Food Science and Nutrition', 'FSN', 'en', ['Form4', 'Form5'] + EN_ALEVEL, ['Science', 'Arts'], 3),
+    ('Logic', 'LOGC', 'en', EN_ALEVEL, EN_ARTS, 3),
     ('Religious Studies', 'RELS', 'en', EN_OLEVEL, EN_ARTS, 2),
 ]
 

@@ -155,6 +155,10 @@ class CoursSerializer(FeedbackFieldsMixin, serializers.ModelSerializer):
         # jamais par le client → read-only pour ne pas être exigés à la création.
         read_only_fields = ['id_cours', 'id_enseignant', 'statut', 'nb_vues', 'valide',
                             'date_publication', 'date_creation']
+        # Un cours peut être soit rédigé (texte), soit importé en PDF : `contenu`
+        # n'est donc pas obligatoire. La vue exige qu'au moins l'un des deux soit
+        # fourni. (cf. CoursListView.perform_create)
+        extra_kwargs = {'contenu': {'required': False, 'allow_blank': True}}
 
     def get_enseignant_nom(self, obj):
         return f"{obj.id_enseignant.prenom} {obj.id_enseignant.nom}"

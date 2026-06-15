@@ -29,12 +29,16 @@ class MatiereFilter(django_filters.FilterSet):
 
 
 class MatiereListView(generics.ListAPIView):
-    queryset = Matieres.objects.filter(actif=True)
+    queryset = Matieres.objects.filter(actif=True).order_by('nom')
     serializer_class = MatiereSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = MatiereFilter
     search_fields = ['nom', 'code']
+    # Le catalogue des matières est un petit ensemble borné (~30 entrées).
+    # On désactive la pagination : sinon les formulaires d'ajout de contenu ne
+    # reçoivent que les 20 premières matières (PAGE_SIZE) et il en manque.
+    pagination_class = None
 
     @method_decorator(cache_page(60 * 60))  # Cache 1 heure
     def dispatch(self, *args, **kwargs):

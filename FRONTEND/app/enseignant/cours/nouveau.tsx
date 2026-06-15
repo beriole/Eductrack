@@ -13,12 +13,27 @@ export default function NouveauCoursScreen() {
   const creer = async (data: CoursData) => {
     setSaving(true);
     try {
-      await api.post('/cours/', data);
+      const { fichier, ...rest } = data;
+      if (fichier) {
+        // Cours avec PDF → multipart/form-data.
+        const form = new FormData();
+        form.append('titre', rest.titre);
+        form.append('contenu', rest.contenu);
+        form.append('niveau', rest.niveau);
+        form.append('id_matiere', rest.id_matiere);
+        if (rest.serie) form.append('serie', rest.serie);
+        form.append('fichier_pdf', { uri: fichier.uri, name: fichier.name, type: 'application/pdf' } as any);
+        await api.post('/cours/', form, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 });
+      } else {
+        await api.post('/cours/', rest);
+      }
       Alert.alert('Cours créé', 'Ton cours a été enregistré en brouillon.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      Alert.alert('Erreur', e?.response?.data?.detail ?? "La création a échoué.");
+      const err = e?.response?.data;
+      const msg = err?.detail ?? err?.contenu ?? (typeof err === 'string' ? err : "La création a échoué.");
+      Alert.alert('Erreur', Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setSaving(false);
     }

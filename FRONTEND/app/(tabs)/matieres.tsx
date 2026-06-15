@@ -1,24 +1,18 @@
 import { useEffect, useState } from 'react';
-import {
-  View, Text, StyleSheet, SectionList, TouchableOpacity,
-  ActivityIndicator, RefreshControl, TextInput,
-} from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
 import { useAuthStore } from '@/src/store/authStore';
-import { colors, radius, spacing, shadow, subjectColor, subjectIconName } from '@/src/theme';
+import { SubjectGrid, SubjectEntry } from '@/src/components/SubjectGrid';
+import { colors, radius, spacing, shadow } from '@/src/theme';
 
 interface Cours {
   id_cours: string;
   titre: string;
+  id_matiere: string;
   matiere_nom: string;
   matiere_code: string;
-  niveau: string;
-  serie: string;
-  nb_vues: number;
-  duree_lecture_min: number;
-  statut: string;
 }
 
 export default function MatieresScreen() {
@@ -28,204 +22,95 @@ export default function MatieresScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
 
-  const fetchCours = async (pageNum = 1, refresh = false) => {
+  const fetchCours = async () => {
     try {
-      // Le backend restreint déjà les cours à la classe de l'élève :
-      // pas de filtre de niveau côté UI.
-      const res = await api.get('/cours/', { params: { page: String(pageNum) } });
-      const results: Cours[] = res.data.results ?? res.data;
-      setCours((prev) => refresh || pageNum === 1 ? results : [...prev, ...results]);
-      setHasNext(!!res.data.next);
-      setPage(pageNum);
+      const res = await api.get('/cours/', { params: { page_size: '200' } });
+      setCours(res.data.results ?? res.data);
     } catch {}
   };
 
-  useEffect(() => {
-    setLoading(true);
-    fetchCours(1, true).finally(() => setLoading(false));
-  }, []);
+  useEffect(() => { setLoading(true); fetchCours().finally(() => setLoading(false)); }, []);
+  const onRefresh = async () => { setRefreshing(true); await fetchCours(); setRefreshing(false); };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchCours(1, true);
-    setRefreshing(false);
-  };
-
-  const loadMore = async () => {
-    if (!hasNext || loadingMore) return;
-    setLoadingMore(true);
-    await fetchCours(page + 1);
-    setLoadingMore(false);
-  };
-
-  const filtered = cours.filter((c) =>
-    c.titre.toLowerCase().includes(search.toLowerCase()) ||
-    c.matiere_nom?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Regroupe les cours par matière (sections triées par nom de matière).
-  const sections = (() => {
-    const map = new Map<string, { title: string; code: string; data: Cours[] }>();
-    for (const c of filtered) {
-      const key = c.matiere_code || c.matiere_nom || 'Autres';
-      if (!map.has(key)) map.set(key, { title: c.matiere_nom || 'Autres', code: c.matiere_code || '', data: [] });
-      map.get(key)!.data.push(c);
+  // Regroupe les cours par matière → une carte par matière.
+  const subjects: SubjectEntry[] = (() => {
+    const map = new Map<string, SubjectEntry>();
+    for (const c of cours) {
+      const key = c.id_matiere || c.matiere_code || c.matiere_nom;
+      if (!key) continue;
+      const entry = map.get(key);
+      if (entry) entry.count += 1;
+      else map.set(key, { id: c.id_matiere, nom: c.matiere_nom || 'Autres', code: c.matiere_code || '', count: 1 });
     }
-    return Array.from(map.values()).sort((a, b) => a.title.localeCompare(b.title));
+    let list = Array.from(map.values());
+    const q = search.trim().toLowerCase();
+    if (q) list = list.filter((s) => s.nom.toLowerCase().includes(q));
+    return list.sort((a, b) => a.nom.localeCompare(b.nom));
   })();
 
-  return (
-    <View style={styles.container}>
-      {/* En-tête */}
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Mes cours</Text>
-          {user?.role === 'eleve' && user?.niveau_scolaire ? (
-            <View style={styles.programmePill}>
-              <Ionicons name="school" size={13} color={colors.primary} />
-              <Text style={styles.programmePillText}>Programme {user.niveau_scolaire}</Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
+  const open = (s: SubjectEntry) =>
+    router.push(`/matiere/${s.id}?mode=cours&nom=${encodeURIComponent(s.nom)}&code=${encodeURIComponent(s.code)}` as any);
 
-      {/* Barre de recherche */}
+  const Header = (
+    <View>
+      <View style={styles.header}>
+        <Text style={styles.title}>Mes cours</Text>
+        {user?.role === 'eleve' && user?.niveau_scolaire ? (
+          <View style={styles.programmePill}>
+            <Ionicons name="school" size={13} color={colors.primary} />
+            <Text style={styles.programmePillText}>Programme {user.niveau_scolaire}</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={styles.hint}>Choisis une matière pour voir ses cours.</Text>
       <View style={styles.searchBar}>
-        <Ionicons name="search" size={18} color={colors.textLight} style={styles.searchIcon} />
+        <Ionicons name="search" size={18} color={colors.textLight} style={{ marginRight: spacing.sm }} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Rechercher un cours…"
+          placeholder="Rechercher une matière…"
           placeholderTextColor={colors.textLight}
           value={search}
           onChangeText={setSearch}
         />
       </View>
-
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id_cours}
-          contentContainerStyle={styles.list}
-          stickySectionHeadersEnabled={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.3}
-          ListEmptyComponent={<EmptyState label="Aucun cours disponible pour ta classe." />}
-          ListFooterComponent={loadingMore ? <ActivityIndicator style={{ margin: spacing.md }} color={colors.primary} /> : null}
-          renderSectionHeader={({ section }) => {
-            const c = subjectColor(section.code);
-            return (
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionIcon, { backgroundColor: `${c}1A` }]}>
-                  <Ionicons name={subjectIconName(section.code)} size={16} color={c} />
-                </View>
-                <Text style={styles.sectionTitle}>{section.title}</Text>
-                <View style={styles.sectionCountWrap}>
-                  <Text style={styles.sectionCount}>{section.data.length}</Text>
-                </View>
-              </View>
-            );
-          }}
-          renderItem={({ item }) => {
-            const color = subjectColor(item.matiere_code);
-            return (
-              <TouchableOpacity
-                style={styles.card}
-                activeOpacity={0.85}
-                onPress={() => router.push(`/cours/${item.id_cours}`)}
-              >
-                <View style={[styles.iconBox, { backgroundColor: `${color}1A` }]}>
-                  <Ionicons name={subjectIconName(item.matiere_code)} size={24} color={color} />
-                </View>
-                <View style={styles.cardBody}>
-                  <View style={[styles.matiereBadge, { backgroundColor: `${color}1A` }]}>
-                    <Text style={[styles.matiereBadgeText, { color }]}>{item.matiere_nom ?? '—'}</Text>
-                  </View>
-                  <Text style={styles.titre} numberOfLines={2}>{item.titre}</Text>
-                  <View style={styles.cardFooter}>
-                    <View style={styles.metaItem}>
-                      <Ionicons name="eye-outline" size={13} color={colors.textLight} />
-                      <Text style={styles.meta}>{item.nb_vues}</Text>
-                    </View>
-                    {item.duree_lecture_min ? (
-                      <View style={styles.metaItem}>
-                        <Ionicons name="time-outline" size={13} color={colors.textLight} />
-                        <Text style={styles.meta}>{item.duree_lecture_min} min</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={color} />
-              </TouchableOpacity>
-            );
-          }}
-        />
-      )}
     </View>
   );
-}
 
-function EmptyState({ label }: { label: string }) {
+  if (loading) {
+    return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  }
+
   return (
-    <View style={styles.centered}>
-      <Ionicons name="library-outline" size={44} color={colors.textLight} style={{ marginBottom: spacing.sm }} />
-      <Text style={{ color: colors.textMuted, textAlign: 'center' }}>{label}</Text>
+    <View style={styles.container}>
+      <SubjectGrid
+        subjects={subjects}
+        onPress={open}
+        header={Header}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        emptyLabel="Aucun cours disponible pour ta classe."
+        countLabel={(n) => `${n} cours`}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl, marginTop: 40 },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.md, paddingTop: 56, paddingBottom: spacing.sm,
-  },
-  title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
+  header: { flexDirection: 'row', alignItems: 'center', paddingTop: 56, paddingBottom: spacing.xs },
+  title: { fontSize: 26, fontWeight: '800', color: colors.text, letterSpacing: -0.5, flex: 1 },
   programmePill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-start', marginTop: 6,
-    backgroundColor: colors.primaryLight, borderRadius: radius.full,
-    paddingHorizontal: 12, paddingVertical: 5,
+    backgroundColor: colors.primaryLight, borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 5,
   },
   programmePillText: { fontSize: 12, fontWeight: '700', color: colors.primary },
+  hint: { fontSize: 13, color: colors.textMuted, marginTop: 4, marginBottom: spacing.sm },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
-    marginHorizontal: spacing.md, marginTop: spacing.xs, marginBottom: spacing.sm,
-    borderRadius: radius.md, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border,
-    ...shadow.sm,
+    marginBottom: spacing.sm, borderRadius: radius.md, paddingHorizontal: 14,
+    borderWidth: 1, borderColor: colors.border, ...shadow.sm,
   },
-  searchIcon: { fontSize: 16, marginRight: spacing.sm },
   searchInput: { flex: 1, fontSize: 15, color: colors.text, paddingVertical: 13 },
-  list: { padding: spacing.md, paddingBottom: 32 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, marginBottom: 10 },
-  sectionIcon: { width: 30, height: 30, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
-  sectionTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
-  sectionCountWrap: { backgroundColor: colors.primaryLight, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
-  sectionCount: { fontSize: 12, fontWeight: '800', color: colors.primary },
-  card: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14,
-    borderWidth: 1, borderColor: colors.border, marginBottom: 12, ...shadow.md,
-  },
-  iconBox: {
-    width: 52, height: 52, borderRadius: radius.md,
-    justifyContent: 'center', alignItems: 'center', marginRight: 14,
-  },
-  iconText: { fontSize: 24 },
-  cardBody: { flex: 1 },
-  matiereBadge: { alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 3, borderRadius: radius.sm, marginBottom: 6 },
-  matiereBadgeText: { fontSize: 11, fontWeight: '800' },
-  titre: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 8 },
-  cardFooter: { flexDirection: 'row', gap: 14 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  meta: { fontSize: 12, color: colors.textLight, fontWeight: '600' },
 });

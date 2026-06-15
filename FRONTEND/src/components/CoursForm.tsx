@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { api } from '@/src/lib/api';
 import { colors, radius, spacing, shadow } from '@/src/theme';
 import { SYSTEMES, niveauxFor, Systeme } from '@/src/lib/niveaux';
@@ -11,6 +12,7 @@ export interface CoursData {
   niveau: string;
   serie: string | null;
   id_matiere: string;
+  fichier?: { uri: string; name: string } | null;
 }
 
 interface Matiere { id_matiere: string; nom: string; code: string; niveaux: string[]; }
@@ -36,6 +38,7 @@ export function CoursForm({
   const [idMatiere, setIdMatiere] = useState<string>(initial?.id_matiere ?? '');
   const [titre, setTitre] = useState(initial?.titre ?? '');
   const [contenu, setContenu] = useState(initial?.contenu ?? '');
+  const [fichier, setFichier] = useState<{ uri: string; name: string } | null>(null);
 
   useEffect(() => {
     api.get('/matieres/').then((r) => setMatieres(r.data.results ?? r.data)).catch(() => {});
@@ -43,11 +46,21 @@ export function CoursForm({
 
   const matieresNiveau = matieres.filter((m) => !m.niveaux?.length || m.niveaux.includes(niveau));
 
-  const valide = titre.trim().length >= 3 && contenu.trim().length >= 10 && idMatiere;
+  const choisirPdf = async () => {
+    const res = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+    if (!res.canceled && res.assets?.length) {
+      const a = res.assets[0];
+      setFichier({ uri: a.uri, name: a.name });
+      if (!titre.trim()) setTitre(a.name.replace(/\.pdf$/i, ''));
+    }
+  };
+
+  // Un cours est valide s'il a un titre, une matière, et SOIT du texte SOIT un PDF.
+  const valide = titre.trim().length >= 3 && !!idMatiere && (contenu.trim().length >= 10 || !!fichier);
 
   const submit = () => {
     if (!valide) return;
-    onSubmit({ titre: titre.trim(), contenu: contenu.trim(), niveau, serie, id_matiere: idMatiere });
+    onSubmit({ titre: titre.trim(), contenu: contenu.trim(), niveau, serie, id_matiere: idMatiere, fichier });
   };
 
   return (
@@ -94,7 +107,7 @@ export function CoursForm({
         onChangeText={setTitre}
       />
 
-      <Label>Contenu</Label>
+      <Label>{fichier ? 'Contenu (optionnel — PDF fourni)' : 'Contenu'}</Label>
       <TextInput
         style={[styles.input, styles.textarea]}
         placeholder="Rédige le cours : définitions, propriétés, exemples…"
@@ -104,6 +117,22 @@ export function CoursForm({
         multiline
         textAlignVertical="top"
       />
+
+      <Label>Document PDF (optionnel)</Label>
+      <TouchableOpacity style={styles.fileBtn} onPress={choisirPdf} activeOpacity={0.85}>
+        <Ionicons name={fichier ? 'document-text' : 'cloud-upload-outline'} size={20} color={colors.primary} />
+        <Text style={styles.fileBtnText} numberOfLines={1}>
+          {fichier ? fichier.name : 'Joindre un cours en PDF'}
+        </Text>
+        {fichier ? (
+          <TouchableOpacity onPress={() => setFichier(null)} hitSlop={10}>
+            <Ionicons name="close-circle" size={20} color={colors.textLight} />
+          </TouchableOpacity>
+        ) : null}
+      </TouchableOpacity>
+      <Text style={styles.helper}>
+        Tu peux publier un cours rédigé, un cours en PDF, ou les deux. L'élève pourra consulter le PDF dans l'application.
+      </Text>
 
       <TouchableOpacity
         style={[styles.submit, (!valide || submitting) && { opacity: 0.5 }]}
@@ -139,6 +168,9 @@ const styles = StyleSheet.create({
   muted: { color: colors.textLight, fontSize: 13 },
   input: { backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: colors.text, borderWidth: 1, borderColor: colors.border },
   textarea: { minHeight: 160 },
+  fileBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: radius.md, padding: 14, borderWidth: 1.5, borderColor: colors.borderStrong, borderStyle: 'dashed' },
+  fileBtnText: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.text },
+  helper: { fontSize: 12, color: colors.textLight, lineHeight: 17, marginTop: 8 },
   submit: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 15, marginTop: 22, ...shadow.lg },
   submitText: { color: colors.white, fontWeight: '800', fontSize: 15 },
 });
