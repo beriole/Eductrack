@@ -69,16 +69,33 @@ export default function AdminFinancesScreen() {
     <View>
       <GradientBox colors={colors.gradientPrimary} style={styles.header}>
         <Text style={styles.title}>Finances</Text>
-        <Text style={styles.headSub}>Revenu total</Text>
-        <Text style={styles.bigMoney}>{(stats?.revenu_total ?? 0).toLocaleString('fr-FR')} FCFA</Text>
+        <Text style={styles.headSub}>Revenus & abonnements</Text>
       </GradientBox>
+
+      {/* Carte revenu flottante */}
+      <View style={styles.revenueCard}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.revenueLabel}>Revenu total</Text>
+          <Text style={styles.revenueValue}>
+            {(stats?.revenu_total ?? 0).toLocaleString('fr-FR')}<Text style={styles.revenueUnit}> FCFA</Text>
+          </Text>
+        </View>
+        <View style={styles.revenueDivider} />
+        <View style={styles.revenue30}>
+          <View style={styles.revenue30Pill}>
+            <Ionicons name="trending-up" size={13} color={colors.success} />
+            <Text style={styles.revenue30Value}>{fmtMoney(stats?.revenu_30j ?? 0)} F</Text>
+          </View>
+          <Text style={styles.revenue30Label}>sur 30 jours</Text>
+        </View>
+      </View>
 
       <View style={styles.body}>
         <View style={styles.grid}>
           <KpiCard icon="repeat" label="MRR (mensuel)" value={fmtMoney(stats?.mrr ?? 0)} suffix=" F" color={colors.primary} />
-          <KpiCard icon="trending-up" label="Revenu 30j" value={fmtMoney(stats?.revenu_30j ?? 0)} suffix=" F" color={colors.emerald} />
           <KpiCard icon="card" label="Abonnés actifs" value={stats?.abonnements_actifs ?? 0} color={colors.accent} />
           <KpiCard icon="checkmark-done" label="Taux paiement" value={`${stats?.taux_confirmation ?? 0}%`} color={colors.violet} />
+          <KpiCard icon="hourglass" label="En attente" value={stats?.paiements_en_attente ?? 0} color={colors.warning} />
         </View>
 
         <Text style={styles.section}>Revenus (6 semaines)</Text>
@@ -202,10 +219,18 @@ function methodLabel(m: string) { return ({ mtn_momo: 'MTN MoMo', orange_money: 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
-  header: { paddingTop: 56, paddingBottom: 22, paddingHorizontal: spacing.lg, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
+  header: { paddingTop: 56, paddingBottom: 44, paddingHorizontal: spacing.lg, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
   title: { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
-  headSub: { fontSize: 12.5, color: 'rgba(255,255,255,0.85)', marginTop: 10 },
-  bigMoney: { fontSize: 30, fontWeight: '900', color: '#fff', letterSpacing: -1, marginTop: 2 },
+  headSub: { fontSize: 12.5, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
+  revenueCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, marginHorizontal: spacing.md, marginTop: -26, borderRadius: radius.lg, padding: spacing.md, ...shadow.md },
+  revenueLabel: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
+  revenueValue: { fontSize: 24, fontWeight: '900', color: colors.text, letterSpacing: -0.6, marginTop: 2 },
+  revenueUnit: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
+  revenueDivider: { width: 1, height: 40, backgroundColor: colors.border, marginHorizontal: 14 },
+  revenue30: { alignItems: 'flex-end' },
+  revenue30Pill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: `${colors.success}15`, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.full },
+  revenue30Value: { fontSize: 13.5, fontWeight: '800', color: colors.success },
+  revenue30Label: { fontSize: 11, color: colors.textLight, fontWeight: '600', marginTop: 4 },
   body: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   section: { fontSize: 15, fontWeight: '800', color: colors.text, marginTop: 18, marginBottom: 10 },
