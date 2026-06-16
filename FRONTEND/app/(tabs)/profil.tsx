@@ -6,12 +6,19 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '@/src/store/authStore';
 import { useI18n } from '@/src/i18n/useI18n';
-import { api } from '@/src/lib/api';
+import { api, BASE_URL } from '@/src/lib/api';
 import { GradientBox } from '@/src/components/GradientBox';
 import { programmerRappels, annulerRappels, notificationTest } from '@/src/lib/reminders';
 import { colors, radius, spacing, shadow } from '@/src/theme';
+
+// Les avatars uploadés sont servis en chemin relatif (/media/...) → on préfixe
+// par l'origine du serveur (BASE_URL sans le suffixe /api/v1).
+const MEDIA_ORIGIN = BASE_URL.replace(/\/api\/v1\/?$/, '');
+const resolveAvatar = (url?: string | null) =>
+  !url ? null : url.startsWith('http') ? url : `${MEDIA_ORIGIN}${url}`;
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -46,6 +53,31 @@ export default function ProfilScreen() {
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const changerAvatar = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permission requise', "Autorise l'accès aux photos pour changer ta photo de profil.");
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.6,
+    });
+    if (res.canceled || !res.assets?.length) return;
+    const a = res.assets[0];
+    const form = new FormData();
+    form.append('avatar', { uri: a.uri, name: a.fileName || 'avatar.jpg', type: a.mimeType || 'image/jpeg' } as any);
+    setUploadingAvatar(true);
+    try {
+      await api.post('/users/me/avatar/', form, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 });
+      await refreshUser();
+    } catch {
+      Alert.alert('Erreur', "L'envoi de la photo a échoué.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   // Rappels de révision (notifications locales) — activés par défaut pour les élèves.
   const [rappelsActifs, setRappelsActifs] = useState(true);
@@ -109,40 +141,43 @@ export default function ProfilScreen() {
   const initials = `${user.prenom?.[0] ?? ''}${user.nom?.[0] ?? ''}`.toUpperCase();
   const roleLabel = { eleve: 'Élève', parent: 'Parent', enseignant: 'Enseignant', admin: 'Admin' }[user.role];
   const links = QUICK_LINKS.filter((l) => !l.roles || l.roles.includes(user.role));
+  const avatarUri = resolveAvatar(user.avatar_url);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.inner} showsVerticalScrollIndicator={false}>
       {/* En-tête dégradé */}
       <GradientBox colors={colors.gradientPrimary} style={styles.hero}>
-        <View style={styles.avatarRing}>
-          {user.avatar_url ? (
-            <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
+        <TouchableOpacity style={styles.avatarRing} activeOpacity={0.85} onPress={changerAvatar} disabled={uploadingAvatar}>
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.initials}>{initials}</Text>
             </View>
           )}
-        </View>
+          <View style={styles.camBadge}>
+            {uploadingAvatar
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Ionicons name="camera" size={14} color="#fff" />}
+          </View>
+        </TouchableOpacity>
         <Text style={styles.name}>{user.prenom} {user.nom}</Text>
+        <Text style={styles.heroEmail} numberOfLines={1}>{user.email}</Text>
         <View style={styles.roleBadge}>
           <Ionicons name="shield-checkmark" size={12} color="#fff" />
           <Text style={styles.roleText}>{roleLabel}</Text>
+          {user.email_verifie && <Ionicons name="checkmark-circle" size={13} color="#fff" />}
         </View>
       </GradientBox>
 
       {/* Carte de stats flottante (élève) */}
-      {user.role === 'eleve' ? (
+      {user.role === 'eleve' && (
         <View style={styles.floatCard}>
           <Stat value={`${user.score_global ?? 0}`} label="Score" icon="trophy" color={colors.primary} />
           <View style={styles.floatDivider} />
           <Stat value={`${user.streak_jours ?? 0}`} label="Série" icon="flame" color={colors.amber} />
           <View style={styles.floatDivider} />
           <Stat value={`${user.points_gamification ?? 0}`} label="XP" icon="flash" color={colors.emerald} />
-        </View>
-      ) : (
-        <View style={[styles.floatCard, { justifyContent: 'center', gap: 8 }]}>
-          <Ionicons name="mail" size={18} color={colors.primary} />
-          <Text style={styles.floatEmail} numberOfLines={1}>{user.email}</Text>
         </View>
       )}
 
@@ -157,7 +192,7 @@ export default function ProfilScreen() {
 
       {/* Accès rapides */}
       <View style={styles.cardSection}>
-        <Text style={styles.sectionTitle}>Accès rapide</Text>
+        <SectionTitle icon="apps">Accès rapide</SectionTitle>
         <View style={styles.grid}>
           {links.map((l) => (
             <TouchableOpacity key={l.route} style={styles.tile} activeOpacity={0.7} onPress={() => router.push(l.route as any)}>
@@ -173,7 +208,7 @@ export default function ProfilScreen() {
       {/* Infos + édition */}
       <View style={styles.cardSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{editing ? 'Modifier le profil' : 'Informations'}</Text>
+          <SectionTitle icon="person-circle" noMargin>{editing ? 'Modifier le profil' : 'Informations'}</SectionTitle>
           {!editing && (
             <TouchableOpacity style={styles.editChip} onPress={() => setEditing(true)}>
               <Ionicons name="pencil" size={13} color={colors.primary} />
@@ -223,7 +258,7 @@ export default function ProfilScreen() {
       {/* Rappels de révision (notifications locales) — élèves */}
       {user.role === 'eleve' && (
         <View style={styles.cardSection}>
-          <Text style={styles.sectionTitle}>Rappels de révision</Text>
+          <SectionTitle icon="alarm">Rappels de révision</SectionTitle>
           <View style={styles.rappelRow}>
             <View style={styles.rappelIcon}><Ionicons name="alarm" size={20} color={colors.primary} /></View>
             <View style={{ flex: 1 }}>
@@ -249,7 +284,7 @@ export default function ProfilScreen() {
 
       {/* Langue */}
       <View style={styles.cardSection}>
-        <Text style={styles.sectionTitle}>{t('profil.language')}</Text>
+        <SectionTitle icon="language">{t('profil.language')}</SectionTitle>
         <View style={styles.langRow}>
           {(['fr', 'en'] as const).map((code) => (
             <TouchableOpacity
@@ -275,6 +310,15 @@ export default function ProfilScreen() {
       </TouchableOpacity>
       <Text style={styles.version}>SmartSchool · v1.0</Text>
     </ScrollView>
+  );
+}
+
+function SectionTitle({ icon, children, noMargin }: { icon: IconName; children: React.ReactNode; noMargin?: boolean }) {
+  return (
+    <View style={[styles.titleRow, noMargin && { marginBottom: 0 }]}>
+      <Ionicons name={icon} size={16} color={colors.primary} />
+      <Text style={styles.titleText}>{children}</Text>
+    </View>
   );
 }
 
@@ -318,7 +362,9 @@ const styles = StyleSheet.create({
   avatar: { width: 88, height: 88, borderRadius: 44 },
   avatarPlaceholder: { width: 88, height: 88, borderRadius: 44, backgroundColor: 'rgba(255,255,255,0.22)', justifyContent: 'center', alignItems: 'center' },
   initials: { color: '#fff', fontSize: 30, fontWeight: '800' },
+  camBadge: { position: 'absolute', right: 0, bottom: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: colors.primaryDark, borderWidth: 2, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
   name: { fontSize: 22, fontWeight: '800', color: '#fff', marginTop: 12 },
+  heroEmail: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 3 },
   roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: radius.full },
   roleText: { fontSize: 12.5, fontWeight: '800', color: '#fff' },
 
@@ -336,6 +382,8 @@ const styles = StyleSheet.create({
   cardSection: { backgroundColor: colors.surface, marginHorizontal: spacing.md, marginTop: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, borderRadius: radius.lg, ...shadow.sm },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle: { fontSize: 15, fontWeight: '800', color: colors.text, marginBottom: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 },
+  titleText: { fontSize: 15, fontWeight: '800', color: colors.text },
   rappelRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   rappelIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   rappelTitle: { fontSize: 14.5, fontWeight: '800', color: colors.text },
