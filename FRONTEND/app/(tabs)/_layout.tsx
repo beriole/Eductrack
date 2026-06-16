@@ -11,6 +11,7 @@ export default function TabsLayout() {
   const isEleve = role === 'eleve';
   const isEns = role === 'enseignant';
   const isParent = role === 'parent';
+  const isAdmin = role === 'admin';
 
   // On garde TOUS les écrans enregistrés en permanence (jamais de href:null
   // dynamique, sinon React plante « rendered fewer hooks »). On masque
@@ -50,6 +51,11 @@ export default function TabsLayout() {
       <Tabs.Screen name="ens-cours" options={{ title: 'Cours', tabBarIcon: icon('library'), tabBarItemStyle: show(isEns) }} />
       <Tabs.Screen name="ens-exercices" options={{ title: 'Exercices', tabBarIcon: icon('barbell'), tabBarItemStyle: show(isEns) }} />
       <Tabs.Screen name="ens-examens" options={{ title: 'Examens', tabBarIcon: icon('documents'), tabBarItemStyle: show(isEns) }} />
+
+      {/* Super-admin */}
+      <Tabs.Screen name="admin-users" options={{ title: 'Utilisateurs', tabBarIcon: icon('people'), tabBarItemStyle: show(isAdmin) }} />
+      <Tabs.Screen name="admin-moderation" options={{ title: 'Modération', tabBarIcon: icon('shield-checkmark'), tabBarItemStyle: show(isAdmin) }} />
+      <Tabs.Screen name="admin-finances" options={{ title: 'Finances', tabBarIcon: icon('cash'), tabBarItemStyle: show(isAdmin) }} />
 
       {/* Commun à tous */}
       <Tabs.Screen name="profil" options={{ title: 'Profil', tabBarIcon: icon('person') }} />

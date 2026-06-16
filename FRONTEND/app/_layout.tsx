@@ -51,6 +51,11 @@ function RootLayoutNav() {
       <Stack.Screen name="notifications" />
       <Stack.Screen name="focus" />
       <Stack.Screen name="parent/enfant/[id]" />
+      <Stack.Screen name="admin/utilisateur/[id]" />
+      <Stack.Screen name="admin/broadcast" />
+      <Stack.Screen name="admin/audit" />
+      <Stack.Screen name="admin/remunerations" />
+      <Stack.Screen name="admin/plateforme" />
       <Stack.Screen name="abonnement" />
       <Stack.Screen name="planning" />
       <Stack.Screen name="diagnostic" />

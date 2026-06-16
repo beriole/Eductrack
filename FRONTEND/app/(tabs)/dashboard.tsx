@@ -10,6 +10,7 @@ import { useI18n } from '@/src/i18n/useI18n';
 import { colors, radius, shadow } from '@/src/theme';
 import { api } from '@/src/lib/api';
 import { TeacherHome } from '@/src/components/TeacherHome';
+import { AdminHome } from '@/src/components/AdminHome';
 
 interface DashboardData {
   stats_globales: {
@@ -75,6 +76,11 @@ export default function DashboardScreen() {
 
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  }
+
+  // ── Super-admin : back-office plateforme ──
+  if (user?.role === 'admin') {
+    return <AdminHome />;
   }
 
   // ── Enseignant : tableau de bord direct (modules accessibles via les onglets) ──

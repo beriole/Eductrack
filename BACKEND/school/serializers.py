@@ -4,7 +4,7 @@ from .models import (
     Epreuves, Badges, EleveBadges, Diagnostics, Lacunes, RapportsParentaux,
     SessionsExamen, Reponses, Notifications, MessagesChatbot, SessionsFocus,
     Abonnements, Paiements, PlanningsEtude, SessionsEtude, Orientations,
-    MicroLecons, Avis, Favori,
+    MicroLecons, Avis, Favori, Defis,
 )
 from django.contrib.auth.password_validation import validate_password
 from django.core.cache import cache
@@ -244,6 +244,11 @@ class FavoriSerializer(serializers.ModelSerializer):
 class BadgeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Badges
+        fields = '__all__'
+
+class DefiSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Defis
         fields = '__all__'
 
 class EleveBadgeSerializer(serializers.ModelSerializer):

@@ -1000,4 +1000,25 @@ class Favori(models.Model):
         return f"{self.id_eleve} ♥ {cible}"
 
 
+class JournalAdmin(models.Model):
+    """Journal d'audit : trace chaque action sensible effectuée par un admin."""
+    id_journal = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_admin = models.ForeignKey(Utilisateur, on_delete=models.SET_NULL, null=True,
+                                 related_name='actions_admin')
+    action = models.CharField(max_length=80)
+    cible_type = models.CharField(max_length=60, blank=True, null=True)
+    cible_id = models.CharField(max_length=80, blank=True, null=True)
+    details = models.JSONField(default=dict, blank=True)
+    date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'journal_admin'
+        verbose_name = "Action d'administration"
+        verbose_name_plural = "Journal d'administration"
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.action} par {self.id_admin} le {self.date:%Y-%m-%d %H:%M}"
+
+
 

@@ -43,6 +43,16 @@ from school.api_views.feedback_views import (
 )
 from school.api_views.redaction_views import RedactionAnalyseView
 from school.api_views.concours_views import ConcoursListView
+from school.api_views.admin_views import (
+    AdminOverviewView, AdminUsersView, AdminUserDetailView,
+    AdminModerationView, AdminCoursValiderView, AdminCoursRejeterView,
+    AdminAbonnementsView, AdminPaiementsView, AdminPaiementActionView,
+    AdminRemunerationsView, AdminRemunerationPayerView,
+    AdminMatiereListCreateView, AdminMatiereDetailView,
+    AdminBadgeListCreateView, AdminBadgeDetailView,
+    AdminDefiListCreateView, AdminDefiDetailView,
+    AdminBroadcastView, AdminAuditView,
+)
 from rest_framework_simplejwt.views import TokenRefreshView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
@@ -201,4 +211,25 @@ urlpatterns = [
 
     # ── Préparation aux concours (Sprint 6) ───────────────────────────────────────
     path('concours/', ConcoursListView.as_view(), name='api-concours-list'),
+
+    # ── Back-office super-admin (role='admin') ────────────────────────────────────
+    path('admin/overview/', AdminOverviewView.as_view(), name='api-admin-overview'),
+    path('admin/users/', AdminUsersView.as_view(), name='api-admin-users'),
+    path('admin/users/<uuid:user_id>/', AdminUserDetailView.as_view(), name='api-admin-user-detail'),
+    path('admin/moderation/', AdminModerationView.as_view(), name='api-admin-moderation'),
+    path('admin/cours/<uuid:id_cours>/valider/', AdminCoursValiderView.as_view(), name='api-admin-cours-valider'),
+    path('admin/cours/<uuid:id_cours>/rejeter/', AdminCoursRejeterView.as_view(), name='api-admin-cours-rejeter'),
+    path('admin/abonnements/', AdminAbonnementsView.as_view(), name='api-admin-abonnements'),
+    path('admin/paiements/', AdminPaiementsView.as_view(), name='api-admin-paiements'),
+    path('admin/paiements/<uuid:id_paiement>/action/', AdminPaiementActionView.as_view(), name='api-admin-paiement-action'),
+    path('admin/remunerations/', AdminRemunerationsView.as_view(), name='api-admin-remunerations'),
+    path('admin/remunerations/<uuid:id_remuneration>/payer/', AdminRemunerationPayerView.as_view(), name='api-admin-remun-payer'),
+    path('admin/matieres/', AdminMatiereListCreateView.as_view(), name='api-admin-matieres'),
+    path('admin/matieres/<uuid:id_matiere>/', AdminMatiereDetailView.as_view(), name='api-admin-matiere-detail'),
+    path('admin/badges/', AdminBadgeListCreateView.as_view(), name='api-admin-badges'),
+    path('admin/badges/<uuid:id_badge>/', AdminBadgeDetailView.as_view(), name='api-admin-badge-detail'),
+    path('admin/defis/', AdminDefiListCreateView.as_view(), name='api-admin-defis'),
+    path('admin/defis/<uuid:id_defi>/', AdminDefiDetailView.as_view(), name='api-admin-defi-detail'),
+    path('admin/broadcast/', AdminBroadcastView.as_view(), name='api-admin-broadcast'),
+    path('admin/audit/', AdminAuditView.as_view(), name='api-admin-audit'),
 ]

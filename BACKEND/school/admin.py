@@ -6,7 +6,7 @@ from .models import (
     MessagesChatbot, Cours, Notifications, RapportsParentaux,
     Badges, EleveBadges, SessionsFocus, Orientations,
     RemunerationEnseignant, EleveParent, CodeLiaison,
-    MicroLecons, MicroRevisions, Defis, EleveDefis,
+    MicroLecons, MicroRevisions, Defis, EleveDefis, JournalAdmin,
 )
 
 
@@ -199,3 +199,10 @@ class EleveDefisAdmin(admin.ModelAdmin):
     list_display = ('id_eleve', 'id_defi', 'periode_cle', 'progression', 'complete', 'recompense_reclamee')
     list_filter = ('complete', 'recompense_reclamee')
     search_fields = ('id_eleve__email',)
+
+
+@admin.register(JournalAdmin)
+class JournalAdminAdmin(admin.ModelAdmin):
+    list_display = ('action', 'id_admin', 'cible_type', 'cible_id', 'date')
+    list_filter = ('action', 'cible_type')
+    search_fields = ('id_admin__email', 'action', 'cible_id')
