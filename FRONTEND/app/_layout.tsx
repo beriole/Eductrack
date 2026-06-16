@@ -56,6 +56,7 @@ function RootLayoutNav() {
       <Stack.Screen name="admin/audit" />
       <Stack.Screen name="admin/remunerations" />
       <Stack.Screen name="admin/plateforme" />
+      <Stack.Screen name="admin/abonnement-form" />
       <Stack.Screen name="abonnement" />
       <Stack.Screen name="planning" />
       <Stack.Screen name="diagnostic" />

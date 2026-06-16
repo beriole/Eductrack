@@ -318,6 +318,17 @@ class AdminCoursRejeterView(APIView):
 
 # ── 4. Finances ───────────────────────────────────────────────────────────────
 
+ABO_MENSUEL = {'basic': 1000, 'standard': 2500, 'premium': 5000, 'pro': 9000}
+ABO_MULT = {'mensuel': 1, 'trimestriel': 3, 'annuel': 12}
+
+
+def _parse_date(val):
+    try:
+        return datetime.date.fromisoformat(val) if val else None
+    except (TypeError, ValueError):
+        return None
+
+
 class AdminAbonnementsView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -328,6 +339,40 @@ class AdminAbonnementsView(APIView):
             if v:
                 qs = qs.filter(**{f: v})
         return Response(_paginate(request, qs, _abo_row))
+
+    def post(self, request):
+        """Crée un abonnement pour un utilisateur (CRUD admin)."""
+        user = Utilisateur.objects.filter(id_utilisateur=request.data.get('id_utilisateur')).first()
+        if not user:
+            return Response({'error': 'Utilisateur introuvable.'}, status=404)
+
+        formule = request.data.get('formule', 'basic')
+        if formule not in {c[0] for c in Abonnements.FORMULE_CHOICES}:
+            return Response({'error': 'Formule invalide.'}, status=400)
+        periodicite = request.data.get('periodicite', 'mensuel')
+        if periodicite not in ABO_MULT:
+            return Response({'error': 'Périodicité invalide.'}, status=400)
+
+        try:
+            montant = float(request.data.get('montant') or ABO_MENSUEL[formule] * ABO_MULT[periodicite])
+        except (TypeError, ValueError):
+            montant = ABO_MENSUEL[formule] * ABO_MULT[periodicite]
+
+        debut = _parse_date(request.data.get('date_debut')) or timezone.now().date()
+        expiration = _parse_date(request.data.get('date_expiration')) or (
+            debut + datetime.timedelta(days=30 * ABO_MULT[periodicite]))
+        statut = request.data.get('statut', 'actif')
+        if statut not in {c[0] for c in Abonnements.STATUT_CHOICES}:
+            statut = 'actif'
+
+        abo = Abonnements.objects.create(
+            id_utilisateur=user, formule=formule, montant=montant, periodicite=periodicite,
+            date_debut=debut, date_expiration=expiration, statut=statut,
+            renouvellement_auto=bool(request.data.get('renouvellement_auto', True)),
+        )
+        log_admin(request.user, 'creer_abonnement', 'Abonnements', abo.id_abonnement,
+                  email=user.email, formule=formule, montant=montant)
+        return Response(_abo_row(abo), status=201)
 
 
 class AdminFinanceStatsView(APIView):
@@ -390,6 +435,19 @@ class AdminAbonnementUpdateView(APIView):
             a.statut = request.data['statut']; changed['statut'] = a.statut
         if 'formule' in request.data and request.data['formule'] in formules:
             a.formule = request.data['formule']; changed['formule'] = a.formule
+        if 'periodicite' in request.data and request.data['periodicite'] in ABO_MULT:
+            a.periodicite = request.data['periodicite']; changed['periodicite'] = a.periodicite
+        if 'montant' in request.data:
+            try:
+                a.montant = float(request.data['montant']); changed['montant'] = float(a.montant)
+            except (TypeError, ValueError):
+                pass
+        d_debut = _parse_date(request.data.get('date_debut'))
+        if d_debut:
+            a.date_debut = d_debut; changed['date_debut'] = d_debut.isoformat()
+        d_exp = _parse_date(request.data.get('date_expiration'))
+        if d_exp:
+            a.date_expiration = d_exp; changed['date_expiration'] = d_exp.isoformat()
         if 'renouvellement_auto' in request.data:
             a.renouvellement_auto = bool(request.data['renouvellement_auto']); changed['renouvellement_auto'] = a.renouvellement_auto
         # Prolongation : ajoute N jours à l'échéance (réactive si expiré).
@@ -407,6 +465,19 @@ class AdminAbonnementUpdateView(APIView):
         a.save()
         log_admin(request.user, 'maj_abonnement', 'Abonnements', a.id_abonnement, **changed)
         return Response(_abo_row(a))
+
+    def delete(self, request, id_abonnement):
+        a = Abonnements.objects.filter(id_abonnement=id_abonnement).first()
+        if not a:
+            return Response({'error': 'Abonnement introuvable.'}, status=404)
+        email = a.id_utilisateur.email
+        # Les paiements ont une FK RESTRICT → on les retire d'abord (données de gestion).
+        nb_paie = a.paiements.count()
+        a.paiements.all().delete()
+        a.delete()
+        log_admin(request.user, 'supprimer_abonnement', 'Abonnements', id_abonnement,
+                  email=email, paiements_supprimes=nb_paie)
+        return Response({'message': 'Abonnement supprimé.', 'paiements_supprimes': nb_paie}, status=200)
 
 
 class AdminPaiementsView(APIView):

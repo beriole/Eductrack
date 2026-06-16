@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl,
   Modal, Pressable, Alert,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
 import { GradientBox } from '@/src/components/GradientBox';
@@ -26,6 +26,7 @@ const STATUT_COLOR: Record<string, string> = {
 const fmtMoney = (v: number) => v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`;
 
 export default function AdminFinancesScreen() {
+  const router = useRouter();
   const [tab, setTab] = useState<'abos' | 'paie'>('abos');
   const [stats, setStats] = useState<Stats | null>(null);
   const [abos, setAbos] = useState<Abo[]>([]);
@@ -63,6 +64,21 @@ export default function AdminFinancesScreen() {
       setAbos((prev) => prev.map((x) => x.id_abonnement === id ? r.data : x)); await fetch(); }
     catch { Alert.alert('Erreur', 'Modification impossible.'); }
     finally { setBusy(null); }
+  };
+
+  const confirmDelete = () => {
+    if (!manage) return;
+    const a = manage; setManage(null);
+    Alert.alert('Supprimer cet abonnement ?', `${a.email}\nCette action est irréversible (les paiements liés seront aussi supprimés).`, [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Supprimer', style: 'destructive', onPress: async () => {
+        setBusy(a.id_abonnement);
+        try { await api.delete(`/admin/abonnements/${a.id_abonnement}/`);
+          setAbos((prev) => prev.filter((x) => x.id_abonnement !== a.id_abonnement)); await fetch(); }
+        catch { Alert.alert('Erreur', 'Suppression impossible.'); }
+        finally { setBusy(null); }
+      } },
+    ]);
   };
 
   const Header = (
@@ -105,6 +121,14 @@ export default function AdminFinancesScreen() {
           <Seg label={`Abonnements (${abos.length})`} active={tab === 'abos'} onPress={() => setTab('abos')} />
           <Seg label={`Paiements (${paies.length})`} active={tab === 'paie'} onPress={() => setTab('paie')} />
         </View>
+
+        {tab === 'abos' && (
+          <TouchableOpacity style={styles.createBtn} activeOpacity={0.85}
+            onPress={() => router.push('/admin/abonnement-form?mode=create' as any)}>
+            <Ionicons name="add-circle" size={18} color={colors.primary} />
+            <Text style={styles.createBtnText}>Nouvel abonnement</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -182,9 +206,14 @@ export default function AdminFinancesScreen() {
               <Act icon="pause-circle-outline" color={colors.warning} label="Suspendre" onPress={() => aboAction({ statut: 'suspendu' })} />
             )}
             <Act icon="time-outline" color={colors.primary} label="Prolonger de 30 jours" onPress={() => aboAction({ prolonger_jours: 30 })} />
+            <Act icon="create-outline" color={colors.violet} label="Modifier (formule, montant…)" onPress={() => {
+              const a = manage!; setManage(null);
+              router.push(`/admin/abonnement-form?mode=edit&id=${a.id_abonnement}&email=${encodeURIComponent(a.email)}&formule=${a.formule}&periodicite=${a.periodicite}&montant=${a.montant}&statut=${a.statut}` as any);
+            }} />
             {manage?.statut !== 'resilie' && (
               <Act icon="close-circle-outline" color={colors.danger} label="Résilier" onPress={() => aboAction({ statut: 'resilie' })} />
             )}
+            <Act icon="trash-outline" color={colors.danger} label="Supprimer définitivement" onPress={confirmDelete} />
             <TouchableOpacity onPress={() => setManage(null)} style={styles.cancel}><Text style={styles.cancelText}>Annuler</Text></TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -239,6 +268,8 @@ const styles = StyleSheet.create({
   segActive: { backgroundColor: colors.primaryLight, borderColor: colors.primary },
   segText: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
   segTextActive: { color: colors.primary },
+  createBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10, paddingVertical: 11, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.primary, backgroundColor: colors.primaryLight },
+  createBtnText: { color: colors.primary, fontWeight: '800', fontSize: 13.5 },
   list: { paddingHorizontal: spacing.md, paddingBottom: 32 },
   empty: { textAlign: 'center', color: colors.textMuted, marginTop: 20 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginBottom: 10, ...shadow.sm },
