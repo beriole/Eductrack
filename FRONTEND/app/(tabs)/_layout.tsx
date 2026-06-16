@@ -37,11 +37,14 @@ export default function TabsLayout() {
       {/* Commun à tous */}
       <Tabs.Screen name="dashboard" options={{ title: 'Accueil', tabBarIcon: icon('home') }} />
 
+      {/* Parent */}
+      <Tabs.Screen name="enfants" options={{ title: 'Mes enfants', tabBarIcon: icon('people'), tabBarItemStyle: show(isParent) }} />
+
       {/* Élève */}
       <Tabs.Screen name="matieres" options={{ title: 'Cours', tabBarIcon: icon('book'), tabBarItemStyle: show(isEleve) }} />
       <Tabs.Screen name="examens" options={{ title: 'Examens', tabBarIcon: icon('create'), tabBarItemStyle: show(isEleve) }} />
       <Tabs.Screen name="chatbot" options={{ title: 'EduBot', tabBarIcon: icon('chatbubbles'), tabBarItemStyle: show(isEleve) }} />
-      <Tabs.Screen name="classement" options={{ title: 'Top', tabBarIcon: icon('trophy'), tabBarItemStyle: show(isEleve || isParent) }} />
+      <Tabs.Screen name="classement" options={{ title: 'Top', tabBarIcon: icon('trophy'), tabBarItemStyle: show(isEleve) }} />
 
       {/* Enseignant — modules en onglets */}
       <Tabs.Screen name="ens-cours" options={{ title: 'Cours', tabBarIcon: icon('library'), tabBarItemStyle: show(isEns) }} />

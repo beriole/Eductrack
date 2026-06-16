@@ -22,7 +22,7 @@ export default function LierEnfantScreen() {
     try {
       await api.post('/parents/lier/', { code: value });
       Alert.alert('Enfant lié', 'Le compte de votre enfant est maintenant suivi.', [
-        { text: 'OK', onPress: () => router.replace('/parent/dashboard') },
+        { text: 'OK', onPress: () => router.replace('/(tabs)/enfants') },
       ]);
     } catch (e: any) {
       const msg = e?.response?.data?.error ?? 'Liaison impossible. Vérifie le code.';

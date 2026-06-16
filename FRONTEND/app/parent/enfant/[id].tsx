@@ -6,6 +6,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
+import { telechargerEtPartagerPdf } from '@/src/lib/pdfShare';
 import { GradientBox } from '@/src/components/GradientBox';
 import { colors, radius, spacing, shadow, subjectColor } from '@/src/theme';
 
@@ -55,6 +56,7 @@ export default function EnfantSuiviScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const fetch = async () => {
     try {
@@ -75,6 +77,27 @@ export default function EnfantSuiviScreen() {
     } catch (e: any) {
       Alert.alert('Info', e?.response?.data?.message ?? 'Erreur lors de la génération.');
     } finally { setGenerating(false); }
+  };
+
+  const partagerRapport = async () => {
+    if (!data) return;
+    setSharing(true);
+    try {
+      // S'assure qu'un rapport existe (génère, sinon récupère le plus récent).
+      let rid: string | null = null;
+      try {
+        const g = await api.post('/parents/rapports/generer/', { enfant_id: id });
+        rid = g.data.rapport?.id_rapport ?? null;
+      } catch { /* déjà généré aujourd'hui → on prend le dernier */ }
+      if (!rid) {
+        const list = await api.get('/parents/rapports/', { params: { enfant_id: id } });
+        const arr = list.data.results ?? list.data;
+        rid = arr?.[0]?.id_rapport ?? null;
+      }
+      if (!rid) { Alert.alert('Info', 'Aucun rapport disponible.'); return; }
+      const fn = `rapport_${data.enfant.prenom}_${data.enfant.nom}.pdf`;
+      await telechargerEtPartagerPdf(`/parents/rapports/${rid}/pdf/`, fn);
+    } finally { setSharing(false); }
   };
 
   if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
@@ -253,10 +276,17 @@ export default function EnfantSuiviScreen() {
           </View>
 
           {/* Rapport */}
-          <TouchableOpacity style={styles.rapportBtn} onPress={genererRapport} disabled={generating} activeOpacity={0.85}>
-            {generating ? <ActivityIndicator color={colors.white} size="small" /> :
-              <><Ionicons name="document-text-outline" size={17} color={colors.white} /><Text style={styles.rapportText}>Générer le rapport hebdomadaire</Text></>}
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Rapport hebdomadaire</Text>
+          <View style={styles.rapportRow}>
+            <TouchableOpacity style={[styles.rapportBtn, styles.rapportOutline]} onPress={genererRapport} disabled={generating} activeOpacity={0.85}>
+              {generating ? <ActivityIndicator color={colors.primary} size="small" /> :
+                <><Ionicons name="eye-outline" size={17} color={colors.primary} /><Text style={[styles.rapportText, { color: colors.primary }]}>Résumé</Text></>}
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.rapportBtn, styles.rapportPrimary]} onPress={partagerRapport} disabled={sharing} activeOpacity={0.85}>
+              {sharing ? <ActivityIndicator color={colors.white} size="small" /> :
+                <><Ionicons name="share-social-outline" size={17} color={colors.white} /><Text style={styles.rapportText}>Partager le PDF</Text></>}
+            </TouchableOpacity>
+          </View>
 
           <View style={{ height: 32 }} />
         </View>
@@ -354,6 +384,9 @@ const styles = StyleSheet.create({
   conseilRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 6 },
   conseilText: { flex: 1, fontSize: 13.5, color: colors.text, fontWeight: '600', lineHeight: 19 },
 
-  rapportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 15, marginTop: 22, ...shadow.md },
-  rapportText: { color: colors.white, fontWeight: '800', fontSize: 15 },
+  rapportRow: { flexDirection: 'row', gap: 10 },
+  rapportBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: radius.md, paddingVertical: 15 },
+  rapportPrimary: { backgroundColor: colors.primary, ...shadow.md },
+  rapportOutline: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.primary },
+  rapportText: { color: colors.white, fontWeight: '800', fontSize: 14.5 },
 });

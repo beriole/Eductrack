@@ -35,7 +35,7 @@ const QUICK_LINKS: QuickLink[] = [
   { icon: 'trophy', label: 'Classement', route: '/(tabs)/classement', color: '#EAB308', roles: ['eleve'] },
   { icon: 'link', label: 'Liaison', route: '/liaison', color: colors.violet, roles: ['eleve'] },
   { icon: 'card', label: 'Abonnement', route: '/abonnement', color: colors.emerald },
-  { icon: 'people', label: 'Mes enfants', route: '/parent/dashboard', color: colors.primary, roles: ['parent'] },
+  { icon: 'people', label: 'Mes enfants', route: '/(tabs)/enfants', color: colors.primary, roles: ['parent'] },
   { icon: 'person-add', label: 'Lier enfant', route: '/parent/lier', color: colors.accent, roles: ['parent'] },
 ];
 

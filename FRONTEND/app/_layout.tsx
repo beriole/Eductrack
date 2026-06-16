@@ -50,7 +50,6 @@ function RootLayoutNav() {
       <Stack.Screen name="sessions/resultat" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="focus" />
-      <Stack.Screen name="parent/dashboard" />
       <Stack.Screen name="parent/enfant/[id]" />
       <Stack.Screen name="abonnement" />
       <Stack.Screen name="planning" />

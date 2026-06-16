@@ -88,7 +88,7 @@ export default function DashboardScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.scroll}>
         <Header prenom={user?.prenom} subtitle="Espace parent" />
         <View style={{ paddingHorizontal: 20, gap: 12 }}>
-          <RoleCard icon="people" title="Suivi de mes enfants" sub="Stats, rapports et progression" onPress={() => router.push('/parent/dashboard')} />
+          <RoleCard icon="people" title="Suivi de mes enfants" sub="Stats, rapports et progression" onPress={() => router.push('/(tabs)/enfants')} />
           <RoleCard icon="notifications" title="Notifications" sub="Alertes et mises à jour" onPress={() => router.push('/notifications')} />
         </View>
       </ScrollView>
