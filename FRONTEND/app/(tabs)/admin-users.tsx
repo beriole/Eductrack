@@ -5,6 +5,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
+import { GradientBox } from '@/src/components/GradientBox';
 import { colors, radius, spacing, shadow } from '@/src/theme';
 
 interface User {
@@ -49,10 +50,10 @@ export default function AdminUsersScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <GradientBox colors={colors.gradientPrimary} style={styles.header}>
         <Text style={styles.title}>Utilisateurs</Text>
-        <Text style={styles.subtitle}>{count} compte(s)</Text>
-      </View>
+        <Text style={styles.subtitle}>{count} compte(s) sur la plateforme</Text>
+      </GradientBox>
 
       <View style={styles.searchBar}>
         <Ionicons name="search" size={18} color={colors.textLight} style={{ marginRight: 8 }} />
@@ -111,10 +112,10 @@ export default function AdminUsersScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 40 },
-  header: { paddingHorizontal: spacing.md, paddingTop: 56, paddingBottom: 6 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
-  subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, marginHorizontal: spacing.md, marginTop: 8, borderRadius: radius.md, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border, ...shadow.sm },
+  header: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: 22, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
+  title: { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, marginHorizontal: spacing.md, marginTop: 12, borderRadius: radius.md, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border, ...shadow.sm },
   searchInput: { flex: 1, fontSize: 15, color: colors.text, paddingVertical: 12 },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: spacing.md, paddingVertical: 10 },
   chip: { paddingHorizontal: 13, paddingVertical: 7, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },

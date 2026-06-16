@@ -46,7 +46,8 @@ from school.api_views.concours_views import ConcoursListView
 from school.api_views.admin_views import (
     AdminOverviewView, AdminUsersView, AdminUserDetailView,
     AdminModerationView, AdminCoursValiderView, AdminCoursRejeterView,
-    AdminAbonnementsView, AdminPaiementsView, AdminPaiementActionView,
+    AdminAbonnementsView, AdminAbonnementUpdateView, AdminFinanceStatsView,
+    AdminPaiementsView, AdminPaiementActionView,
     AdminRemunerationsView, AdminRemunerationPayerView,
     AdminMatiereListCreateView, AdminMatiereDetailView,
     AdminBadgeListCreateView, AdminBadgeDetailView,
@@ -220,6 +221,8 @@ urlpatterns = [
     path('admin/cours/<uuid:id_cours>/valider/', AdminCoursValiderView.as_view(), name='api-admin-cours-valider'),
     path('admin/cours/<uuid:id_cours>/rejeter/', AdminCoursRejeterView.as_view(), name='api-admin-cours-rejeter'),
     path('admin/abonnements/', AdminAbonnementsView.as_view(), name='api-admin-abonnements'),
+    path('admin/abonnements/<uuid:id_abonnement>/', AdminAbonnementUpdateView.as_view(), name='api-admin-abonnement-update'),
+    path('admin/finances/stats/', AdminFinanceStatsView.as_view(), name='api-admin-finances-stats'),
     path('admin/paiements/', AdminPaiementsView.as_view(), name='api-admin-paiements'),
     path('admin/paiements/<uuid:id_paiement>/action/', AdminPaiementActionView.as_view(), name='api-admin-paiement-action'),
     path('admin/remunerations/', AdminRemunerationsView.as_view(), name='api-admin-remunerations'),

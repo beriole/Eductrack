@@ -330,6 +330,85 @@ class AdminAbonnementsView(APIView):
         return Response(_paginate(request, qs, _abo_row))
 
 
+class AdminFinanceStatsView(APIView):
+    """Statistiques financières détaillées pour l'onglet Finances."""
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    _MULT = {'mensuel': 1, 'trimestriel': 3, 'annuel': 12}
+
+    def get(self, request):
+        now = timezone.now()
+        j30 = now - datetime.timedelta(days=30)
+
+        paie_ok = Paiements.objects.filter(statut='confirme')
+        revenu_total = float(paie_ok.aggregate(s=Sum('montant'))['s'] or 0)
+        revenu_30j = float(paie_ok.filter(date_paiement__gte=j30).aggregate(s=Sum('montant'))['s'] or 0)
+
+        par_methode = {r['methode_paiement']: float(r['s'] or 0)
+                       for r in paie_ok.values('methode_paiement').annotate(s=Sum('montant'))}
+
+        tous_paie = Paiements.objects.count()
+        taux_confirmation = round(paie_ok.count() / tous_paie * 100) if tous_paie else 0
+
+        abos = Abonnements.objects.all()
+        abos_par_statut = {r['statut']: r['n'] for r in abos.values('statut').annotate(n=Count('id_abonnement'))}
+        abos_par_formule = {r['formule']: r['n'] for r in abos.filter(statut='actif').values('formule').annotate(n=Count('id_abonnement'))}
+
+        # MRR : on ramène chaque abonnement actif à un montant mensuel.
+        mrr = 0.0
+        for a in abos.filter(statut='actif'):
+            mrr += float(a.montant) / self._MULT.get(a.periodicite, 1)
+
+        return Response({
+            'revenu_total': revenu_total,
+            'revenu_30j': revenu_30j,
+            'mrr': round(mrr),
+            'abonnements_actifs': abos.filter(statut='actif').count(),
+            'paiements_en_attente': Paiements.objects.filter(statut='en_attente').count(),
+            'taux_confirmation': taux_confirmation,
+            'revenu_par_methode': par_methode,
+            'abonnements_par_statut': abos_par_statut,
+            'abonnements_par_formule': abos_par_formule,
+            'serie_revenus': _week_buckets(paie_ok, 'date_paiement', value='montant'),
+        })
+
+
+class AdminAbonnementUpdateView(APIView):
+    """Gestion d'un abonnement par l'admin : statut, formule, échéance, renouvellement."""
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def patch(self, request, id_abonnement):
+        a = Abonnements.objects.filter(id_abonnement=id_abonnement).select_related('id_utilisateur').first()
+        if not a:
+            return Response({'error': 'Abonnement introuvable.'}, status=404)
+
+        changed = {}
+        statuts = {c[0] for c in Abonnements.STATUT_CHOICES}
+        formules = {c[0] for c in Abonnements.FORMULE_CHOICES}
+
+        if 'statut' in request.data and request.data['statut'] in statuts:
+            a.statut = request.data['statut']; changed['statut'] = a.statut
+        if 'formule' in request.data and request.data['formule'] in formules:
+            a.formule = request.data['formule']; changed['formule'] = a.formule
+        if 'renouvellement_auto' in request.data:
+            a.renouvellement_auto = bool(request.data['renouvellement_auto']); changed['renouvellement_auto'] = a.renouvellement_auto
+        # Prolongation : ajoute N jours à l'échéance (réactive si expiré).
+        try:
+            jours = int(request.data.get('prolonger_jours', 0) or 0)
+        except (TypeError, ValueError):
+            jours = 0
+        if jours:
+            base = max(a.date_expiration, timezone.now().date())
+            a.date_expiration = base + datetime.timedelta(days=jours)
+            if a.statut in ('expire',):
+                a.statut = 'actif'; changed['statut'] = a.statut
+            changed['prolonge_jours'] = jours
+
+        a.save()
+        log_admin(request.user, 'maj_abonnement', 'Abonnements', a.id_abonnement, **changed)
+        return Response(_abo_row(a))
+
+
 class AdminPaiementsView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 

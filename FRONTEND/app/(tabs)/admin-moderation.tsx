@@ -6,6 +6,7 @@ import {
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
+import { GradientBox } from '@/src/components/GradientBox';
 import { colors, radius, spacing, shadow, subjectColor, subjectIconName } from '@/src/theme';
 
 interface ModItem {
@@ -44,10 +45,10 @@ export default function AdminModerationScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <GradientBox colors={colors.gradientPrimary} style={styles.header}>
         <Text style={styles.title}>Modération</Text>
         <Text style={styles.subtitle}>{items.length} contenu(s) en attente</Text>
-      </View>
+      </GradientBox>
 
       {loading ? (
         <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
@@ -116,9 +117,9 @@ export default function AdminModerationScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50, padding: spacing.xl },
-  header: { paddingHorizontal: spacing.md, paddingTop: 56, paddingBottom: 6 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
-  subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  header: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: 22, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
+  title: { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+  subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
   list: { padding: spacing.md, paddingBottom: 32 },
   okIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#ECFDF5', justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
   empty: { color: colors.textMuted, fontWeight: '600', textAlign: 'center' },
