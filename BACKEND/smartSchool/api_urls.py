@@ -8,7 +8,7 @@ from school.api_views.password_views import (
     PasswordChangeView,
 )
 from school.api_views.user_views import UserMeView, UserAvatarUploadView, PushTokenView
-from school.api_views.parent_views import LierEnfantView, EnfantsListView, LienParentEleveDetailView, RapportParentalListView, RapportParentalGenerateView, RapportPDFView
+from school.api_views.parent_views import LierEnfantView, EnfantsListView, EnfantSuiviView, LienParentEleveDetailView, RapportParentalListView, RapportParentalGenerateView, RapportPDFView
 from school.api_views.liaison_views import CodeLiaisonRegenerateView, CodeLiaisonCurrentView, EleveParentsListView, EleveRevokeParentView
 from school.api_views.matiere_views import MatiereListView
 from school.api_views.cours_views import CoursListView, CoursDetailView, CoursSoumettreView
@@ -82,6 +82,7 @@ urlpatterns = [
     # ── Gestion enfants (côté parent) ─────────────────────────────────────────
     path('parents/lier/', LierEnfantView.as_view(), name='api-parents-lier'),
     path('parents/enfants/', EnfantsListView.as_view(), name='api-parents-enfants'),
+    path('parents/enfants/<uuid:enfant_id>/suivi/', EnfantSuiviView.as_view(), name='api-parents-enfant-suivi'),
     path('parents/lien/<uuid:enfant_id>/', LienParentEleveDetailView.as_view(), name='api-parents-lien-detail'),
     path('parents/rapports/', RapportParentalListView.as_view(), name='api-parents-rapports'),
     path('parents/rapports/generer/', RapportParentalGenerateView.as_view(), name='api-parents-rapports-generer'),
