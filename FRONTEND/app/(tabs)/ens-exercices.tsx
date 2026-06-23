@@ -4,6 +4,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
 import { SubjectGrid, SubjectEntry } from '@/src/components/SubjectGrid';
+import { GradientHeader } from '@/src/components/GradientHeader';
 import { colors, radius, spacing, shadow } from '@/src/theme';
 
 interface Exo {
@@ -37,26 +38,21 @@ export default function EnsExercicesTab() {
   const open = (s: SubjectEntry) =>
     router.push(`/enseignant/matiere/${s.id}?kind=exercices&nom=${encodeURIComponent(s.nom)}&code=${encodeURIComponent(s.code)}` as any);
 
-  const Header = (
-    <View style={styles.header}>
-      <Text style={styles.title}>Exercices</Text>
-      <Text style={styles.subtitle}>{items.length} exercice(s) · rangés par matière</Text>
-    </View>
-  );
-
-  if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
-
   return (
     <View style={styles.container}>
+      <GradientHeader title="Exercices" subtitle={`${items.length} exercice(s) · rangés par matière`} icon="barbell" />
+      {loading ? (
+        <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
+      ) : (
       <SubjectGrid
         subjects={subjects}
         onPress={open}
-        header={Header}
         refreshing={refreshing}
         onRefresh={onRefresh}
         emptyLabel="Aucun exercice. Crée ton premier exercice."
         countLabel={(n) => `${n} exo${n > 1 ? 's' : ''}`}
       />
+      )}
       <TouchableOpacity style={styles.fab} onPress={() => router.push('/enseignant/exercices/nouveau' as any)} activeOpacity={0.9}>
         <Ionicons name="add" size={26} color={colors.white} /><Text style={styles.fabText}>Nouvel exercice</Text>
       </TouchableOpacity>

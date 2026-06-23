@@ -23,6 +23,7 @@ function uuidv4(): string {
 interface Source { id_cours: string; titre: string; matiere_nom: string; matiere_code: string }
 interface Message {
   id: string;
+  serverId?: string;          // id du message côté serveur (pour le feedback)
   role: 'user' | 'assistant';
   contenu: string;
   image?: string;
@@ -48,6 +49,11 @@ export default function ChatbotScreen() {
   const [quota, setQuota] = useState<{ illimite: boolean; restant: number | null } | null>(null);
   const sessionRef = useRef<string>(uuidv4());
   const listRef = useRef<FlatList>(null);
+  const targetRef = useRef('');      // texte cible (se remplit via le flux ou d'un coup)
+  const shownRef = useRef(0);        // nb de caractères déjà révélés
+  const doneRef = useRef(false);     // le réseau a fini d'envoyer
+  const typingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => () => { if (typingRef.current) clearInterval(typingRef.current); }, []);
 
   const choisirPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -65,31 +71,31 @@ export default function ChatbotScreen() {
     if (!res.canceled && res.assets?.[0]?.base64) setPhoto(res.assets[0].base64);
   };
 
-  // Réponse classique (un bloc) — sert au mode photo (vision) et de repli.
-  const sendNonStream = async (text: string, img: string | null) => {
-    try {
-      const res = await api.post('/chatbot/message/', {
-        contenu: text, session_chat: sessionRef.current, mode,
-        ...(img ? { image_base64: img } : {}),
-      }, { timeout: 60000 });
-      setMessages((prev) => [...prev, {
-        id: res.data.reponse.id_message, role: 'assistant',
-        contenu: res.data.reponse.contenu, sources: res.data.sources ?? [], utile: null,
-      }]);
-      setQuota({ illimite: !!res.data.quota_illimite, restant: res.data.quota_restant });
-    } catch (e: any) {
-      const quotaAtteint = e?.response?.status === 402;
-      setMessages((prev) => [...prev, {
-        id: 'err-' + Date.now(), role: 'assistant',
-        contenu: quotaAtteint
-          ? "Tu as atteint ta limite quotidienne (formule Basic). Passe à **Standard** pour un accès illimité à EduBot."
-          : "Désolé, je ne peux pas répondre pour l'instant. Réessaie dans un moment.",
-      }]);
-    }
+  // Révélation progressive « style ChatGPT » : on dévoile le texte cible
+  // (targetRef) caractère par caractère, qu'il arrive en flux ou d'un coup.
+  const startTypewriter = (botId: string) => {
+    if (typingRef.current) clearInterval(typingRef.current);
+    typingRef.current = setInterval(() => {
+      setMessages((prev) => prev.map((m) => {
+        if (m.id !== botId) return m;
+        const t = targetRef.current;
+        if (m.contenu.length >= t.length) return m;
+        const remaining = t.length - m.contenu.length;
+        const step = Math.max(1, Math.ceil(remaining / 12)); // accélère si en retard
+        const next = t.slice(0, m.contenu.length + step);
+        shownRef.current = next.length;
+        return { ...m, contenu: next };
+      }));
+      if (doneRef.current && shownRef.current >= targetRef.current.length) {
+        if (typingRef.current) clearInterval(typingRef.current);
+        typingRef.current = null;
+        setSending(false);
+      }
+    }, 24);
   };
 
-  // Réponse en flux (tokens en direct). Lève une erreur AVANT le flux → repli.
-  const sendStream = async (text: string) => {
+  // Flux SSE → remplit progressivement targetRef. Lève une erreur AVANT le flux → repli.
+  const fillStream = async (text: string, botId: string) => {
     const token = await SecureStore.getItemAsync('access_token');
     const resp = await expoFetch(`${BASE_URL}/chatbot/message/stream/`, {
       method: 'POST',
@@ -97,45 +103,48 @@ export default function ChatbotScreen() {
       body: JSON.stringify({ contenu: text, session_chat: sessionRef.current, mode }),
     });
     if (resp.status === 402) {
-      setMessages((prev) => [...prev, {
-        id: 'err-' + Date.now(), role: 'assistant',
-        contenu: "Tu as atteint ta limite quotidienne (formule Basic). Passe à **Standard** pour un accès illimité à EduBot.",
-      }]);
+      targetRef.current = "Tu as atteint ta limite quotidienne (formule Basic). Passe à **Standard** pour un accès illimité à EduBot.";
       return;
     }
     if (!resp.ok || !resp.body) throw new Error('stream indisponible');
-
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
-    const botId = 'stream-' + Date.now();
-    setMessages((prev) => [...prev, { id: botId, role: 'assistant', contenu: '', utile: null }]);
-
-    let pre = '', content = '', metaParsed = false, realId = botId;
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        if (!metaParsed) {
-          pre += chunk;
-          const nl = pre.indexOf('\n');
-          if (nl < 0) continue;
-          try {
-            const meta = JSON.parse(pre.slice(0, nl));
-            realId = meta.id_message || botId;
-            setMessages((prev) => prev.map((m) => m.id === botId ? { ...m, id: realId, sources: meta.sources ?? [] } : m));
-            setQuota({ illimite: !!meta.quota_illimite, restant: meta.quota_restant });
-          } catch {}
-          content = pre.slice(nl + 1);
-          metaParsed = true;
-          setMessages((prev) => prev.map((m) => m.id === realId ? { ...m, contenu: content } : m));
-        } else {
-          content += chunk;
-          setMessages((prev) => prev.map((m) => m.id === realId ? { ...m, contenu: content } : m));
-        }
+    let pre = '', metaParsed = false;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      if (!metaParsed) {
+        pre += chunk;
+        const nl = pre.indexOf('\n');
+        if (nl < 0) continue;
+        try {
+          const meta = JSON.parse(pre.slice(0, nl));
+          setMessages((prev) => prev.map((m) => m.id === botId ? { ...m, serverId: meta.id_message, sources: meta.sources ?? [] } : m));
+          setQuota({ illimite: !!meta.quota_illimite, restant: meta.quota_restant });
+        } catch {}
+        targetRef.current = pre.slice(nl + 1);
+        metaParsed = true;
+      } else {
+        targetRef.current += chunk;
       }
-    } catch {
-      setMessages((prev) => prev.map((m) => m.id === realId ? { ...m, contenu: content + ' …(interrompu)' } : m));
+    }
+  };
+
+  // Réponse en un bloc (vision + repli) → remplit targetRef d'un coup.
+  const fillNonStream = async (text: string, img: string | null, botId: string) => {
+    try {
+      const res = await api.post('/chatbot/message/', {
+        contenu: text, session_chat: sessionRef.current, mode,
+        ...(img ? { image_base64: img } : {}),
+      }, { timeout: 60000 });
+      setMessages((prev) => prev.map((m) => m.id === botId ? { ...m, serverId: res.data.reponse.id_message, sources: res.data.sources ?? [] } : m));
+      setQuota({ illimite: !!res.data.quota_illimite, restant: res.data.quota_restant });
+      targetRef.current = res.data.reponse.contenu;
+    } catch (e: any) {
+      targetRef.current = e?.response?.status === 402
+        ? "Tu as atteint ta limite quotidienne (formule Basic). Passe à **Standard** pour un accès illimité à EduBot."
+        : "Désolé, je ne peux pas répondre pour l'instant. Réessaie dans un moment.";
     }
   };
 
@@ -147,21 +156,26 @@ export default function ChatbotScreen() {
 
     setMessages((prev) => [...prev, { id: Date.now().toString(), role: 'user', contenu: text || '📸 Exercice', image: img ?? undefined }]);
     setSending(true);
+
+    const botId = 'bot-' + Date.now();
+    targetRef.current = ''; doneRef.current = false; shownRef.current = 0;
+    setMessages((prev) => [...prev, { id: botId, role: 'assistant', contenu: '', utile: null }]);
+    startTypewriter(botId);
+
     try {
-      if (img) {
-        await sendNonStream(text, img);          // vision : pas de flux
-      } else {
-        try { await sendStream(text); }
-        catch { await sendNonStream(text, null); } // repli si flux non supporté
-      }
+      if (img) await fillNonStream(text, img, botId);
+      else { try { await fillStream(text, botId); } catch { await fillNonStream(text, null, botId); } }
+    } catch {
+      targetRef.current = targetRef.current || "Désolé, une erreur est survenue.";
     } finally {
-      setSending(false);
+      doneRef.current = true; // le typewriter terminera la révélation puis s'arrêtera
     }
   };
 
-  const noter = async (id: string, utile: boolean) => {
-    setMessages((prev) => prev.map((m) => m.id === id ? { ...m, utile } : m));
-    try { await api.post(`/chatbot/messages/${id}/feedback/`, { utile }); } catch {}
+  const noter = async (m: Message, utile: boolean) => {
+    if (!m.serverId) return;
+    setMessages((prev) => prev.map((x) => x.id === m.id ? { ...x, utile } : x));
+    try { await api.post(`/chatbot/messages/${m.serverId}/feedback/`, { utile }); } catch {}
   };
 
   useEffect(() => {
@@ -214,7 +228,9 @@ export default function ChatbotScreen() {
               <Image source={{ uri: `data:image/jpeg;base64,${item.image}` }} style={styles.msgImage} resizeMode="cover" />
             )}
             {item.role === 'assistant'
-              ? (item.contenu ? <RichText text={item.contenu} /> : null)
+              ? (item.contenu
+                  ? <RichText text={item.contenu} />
+                  : <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 2, alignSelf: 'flex-start' }} />)
               : (item.contenu ? <Text style={[styles.bubbleText, styles.bubbleTextUser]}>{item.contenu}</Text> : null)}
 
             {/* Sources (cours utilisés) */}
@@ -230,25 +246,19 @@ export default function ChatbotScreen() {
               </View>
             )}
 
-            {/* Feedback 👍/👎 */}
-            {item.role === 'assistant' && item.id !== 'welcome' && !item.id.startsWith('err-') && (
+            {/* Feedback 👍/👎 (une fois la réponse identifiée côté serveur) */}
+            {item.role === 'assistant' && !!item.serverId && (
               <View style={styles.feedbackRow}>
-                <TouchableOpacity onPress={() => noter(item.id, true)} hitSlop={8}>
+                <TouchableOpacity onPress={() => noter(item, true)} hitSlop={8}>
                   <Ionicons name={item.utile === true ? 'thumbs-up' : 'thumbs-up-outline'} size={15} color={item.utile === true ? colors.success : colors.textLight} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => noter(item.id, false)} hitSlop={8}>
+                <TouchableOpacity onPress={() => noter(item, false)} hitSlop={8}>
                   <Ionicons name={item.utile === false ? 'thumbs-down' : 'thumbs-down-outline'} size={15} color={item.utile === false ? colors.danger : colors.textLight} />
                 </TouchableOpacity>
               </View>
             )}
           </View>
         )}
-        ListFooterComponent={sending ? (
-          <View style={[styles.bubble, styles.bubbleBot]}>
-            <View style={styles.botLabelRow}><Ionicons name="sparkles" size={11} color={ACCENT} /><Text style={styles.botLabel}>EduBot</Text></View>
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
-          </View>
-        ) : null}
       />
 
       {/* Aperçu photo sélectionnée */}

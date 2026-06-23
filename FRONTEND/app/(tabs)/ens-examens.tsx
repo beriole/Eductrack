@@ -4,6 +4,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
 import { SubjectGrid, SubjectEntry } from '@/src/components/SubjectGrid';
+import { GradientHeader } from '@/src/components/GradientHeader';
 import { colors, radius, spacing, shadow } from '@/src/theme';
 
 interface Epreuve {
@@ -37,26 +38,21 @@ export default function EnsExamensTab() {
   const open = (s: SubjectEntry) =>
     router.push(`/enseignant/matiere/${s.id}?kind=examens&nom=${encodeURIComponent(s.nom)}&code=${encodeURIComponent(s.code)}` as any);
 
-  const Header = (
-    <View style={styles.header}>
-      <Text style={styles.title}>Examens</Text>
-      <Text style={styles.subtitle}>{epreuves.length} sujet(s) · rangés par matière</Text>
-    </View>
-  );
-
-  if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
-
   return (
     <View style={styles.container}>
+      <GradientHeader title="Examens" subtitle={`${epreuves.length} sujet(s) · rangés par matière`} icon="documents" />
+      {loading ? (
+        <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
+      ) : (
       <SubjectGrid
         subjects={subjects}
         onPress={open}
-        header={Header}
         refreshing={refreshing}
         onRefresh={onRefresh}
         emptyLabel="Aucun sujet. Importe une annale PDF pour démarrer."
         countLabel={(n) => `${n} sujet${n > 1 ? 's' : ''}`}
       />
+      )}
       <TouchableOpacity style={styles.fab} onPress={() => router.push('/enseignant/importer' as any)} activeOpacity={0.9}>
         <Ionicons name="cloud-upload" size={20} color={colors.white} /><Text style={styles.fabText}>Importer un sujet</Text>
       </TouchableOpacity>

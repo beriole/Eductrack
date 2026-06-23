@@ -4,6 +4,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/src/store/authStore';
 import { api } from '@/src/lib/api';
+import { GradientBox } from '@/src/components/GradientBox';
 import { colors, radius, spacing, shadow } from '@/src/theme';
 
 interface Stats {
@@ -45,17 +46,19 @@ export function TeacherHome() {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
-      {/* Header + cloche (comme l'élève) */}
-      <View style={styles.header}>
-        <View style={styles.avatar}><Text style={styles.avatarText}>{(user?.prenom?.[0] ?? '?').toUpperCase()}</Text></View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>{salut}, {user?.prenom} 👋</Text>
-          <Text style={styles.subtitle}>Espace enseignant</Text>
+      {/* En-tête dégradé (cohérent avec les autres rôles) */}
+      <GradientBox colors={colors.gradientPrimary} style={styles.hero}>
+        <View style={styles.heroRow}>
+          <View style={styles.avatar}><Text style={styles.avatarText}>{(user?.prenom?.[0] ?? '?').toUpperCase()}</Text></View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.greeting}>{salut}, {user?.prenom} 👋</Text>
+            <Text style={styles.subtitle}>Espace enseignant</Text>
+          </View>
+          <TouchableOpacity style={styles.bell} onPress={() => router.push('/notifications')} activeOpacity={0.7}>
+            <Ionicons name="notifications-outline" size={20} color="#fff" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.bell} onPress={() => router.push('/notifications')} activeOpacity={0.7}>
-          <Ionicons name="notifications-outline" size={20} color={colors.text} />
-        </TouchableOpacity>
-      </View>
+      </GradientBox>
 
       {/* Stats */}
       <View style={styles.statsGrid}>
@@ -139,15 +142,16 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
-  scroll: { paddingTop: 56, paddingBottom: 16 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, marginBottom: 18 },
-  avatar: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', ...shadow.md },
+  scroll: { paddingBottom: 16 },
+  hero: { paddingTop: 56, paddingBottom: 20, paddingHorizontal: 20, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatar: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.white, fontSize: 18, fontWeight: '800' },
-  greeting: { fontSize: 19, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
-  subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 1 },
-  bell: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...shadow.sm },
+  greeting: { fontSize: 19, fontWeight: '800', color: '#fff', letterSpacing: -0.3 },
+  subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 1 },
+  bell: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
 
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, justifyContent: 'space-between', rowGap: 10 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginTop: 16, justifyContent: 'space-between', rowGap: 10 },
   statCard: { width: '48.5%', backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14, borderWidth: 1, borderColor: colors.border, ...shadow.sm },
   statIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   statValue: { fontSize: 22, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },

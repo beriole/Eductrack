@@ -4,6 +4,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
 import { SubjectGrid, SubjectEntry } from '@/src/components/SubjectGrid';
+import { GradientHeader } from '@/src/components/GradientHeader';
 import { colors, radius, spacing, shadow } from '@/src/theme';
 
 interface Cours {
@@ -37,26 +38,21 @@ export default function EnsCoursTab() {
   const open = (s: SubjectEntry) =>
     router.push(`/enseignant/matiere/${s.id}?kind=cours&nom=${encodeURIComponent(s.nom)}&code=${encodeURIComponent(s.code)}` as any);
 
-  const Header = (
-    <View style={styles.header}>
-      <Text style={styles.title}>Cours</Text>
-      <Text style={styles.subtitle}>{cours.length} cours · rangés par matière</Text>
-    </View>
-  );
-
-  if (loading) return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
-
   return (
     <View style={styles.container}>
+      <GradientHeader title="Cours" subtitle={`${cours.length} cours · rangés par matière`} icon="library" />
+      {loading ? (
+        <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
+      ) : (
       <SubjectGrid
         subjects={subjects}
         onPress={open}
-        header={Header}
         refreshing={refreshing}
         onRefresh={onRefresh}
         emptyLabel="Aucun cours. Crée ton premier cours."
         countLabel={(n) => `${n} cours`}
       />
+      )}
       <TouchableOpacity style={styles.fab} onPress={() => router.push('/enseignant/cours/nouveau' as any)} activeOpacity={0.9}>
         <Ionicons name="add" size={26} color={colors.white} /><Text style={styles.fabText}>Nouveau cours</Text>
       </TouchableOpacity>
