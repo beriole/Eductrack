@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
+import { GradientBox } from '@/src/components/GradientBox';
 import { colors, radius, spacing, shadow, subjectColor, subjectIconName } from '@/src/theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -72,18 +73,18 @@ export default function EnsMatiereContenuScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <GradientBox colors={[`${tint}E6`, tint]} style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backRow}>
-          <Ionicons name="arrow-back" size={20} color={colors.text} />
+          <Ionicons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
-        <View style={[styles.headerIcon, { backgroundColor: `${tint}1A` }]}>
-          <Ionicons name={subjectIconName(code)} size={22} color={tint} />
+        <View style={styles.headerIcon}>
+          <Ionicons name={subjectIconName(code)} size={22} color="#fff" />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.title} numberOfLines={1}>{nom}</Text>
           <Text style={styles.subtitle}>{cfg.title} · {items.length}</Text>
         </View>
-      </View>
+      </GradientBox>
 
       {loading ? (
         <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
@@ -154,11 +155,11 @@ export default function EnsMatiereContenuScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl, marginTop: 40 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: spacing.md, paddingTop: 56, paddingBottom: 10 },
-  backRow: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...shadow.sm },
-  headerIcon: { width: 40, height: 40, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 21, fontWeight: '800', color: colors.text, letterSpacing: -0.4 },
-  subtitle: { fontSize: 12.5, color: colors.textMuted, marginTop: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: spacing.md, paddingTop: 56, paddingBottom: 18, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
+  backRow: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  headerIcon: { width: 40, height: 40, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.18)', justifyContent: 'center', alignItems: 'center' },
+  title: { fontSize: 21, fontWeight: '800', color: '#fff', letterSpacing: -0.4 },
+  subtitle: { fontSize: 12.5, color: 'rgba(255,255,255,0.85)', marginTop: 1 },
   list: { padding: spacing.md, paddingBottom: 110 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, borderWidth: 1, borderColor: colors.border, marginBottom: 12, ...shadow.sm },
   cardIcon: { width: 46, height: 46, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center' },

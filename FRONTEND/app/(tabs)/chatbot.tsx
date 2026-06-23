@@ -6,9 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as SecureStore from 'expo-secure-store';
-import { fetch as expoFetch } from 'expo/fetch';
-import { api, BASE_URL } from '@/src/lib/api';
+import { api } from '@/src/lib/api';
 import { useAuthStore } from '@/src/store/authStore';
 import { RichText } from '@/src/components/RichText';
 import { colors, radius, shadow, subjectColor } from '@/src/theme';
@@ -94,48 +92,7 @@ export default function ChatbotScreen() {
     }, 24);
   };
 
-  // Flux SSE → remplit progressivement targetRef. Lève une erreur AVANT le flux → repli.
-  const fillStream = async (text: string, botId: string) => {
-    const token = await SecureStore.getItemAsync('access_token');
-    const resp = await expoFetch(`${BASE_URL}/chatbot/message/stream/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ contenu: text, session_chat: sessionRef.current, mode }),
-    });
-    if (resp.status === 402) {
-      targetRef.current = "Tu as atteint ta limite quotidienne (formule Basic). Passe à **Standard** pour un accès illimité à EduBot.";
-      return;
-    }
-    if (!resp.ok || !resp.body) throw new Error('stream indisponible');
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    // On accumule les OCTETS et on décode le buffer COMPLET à chaque fois :
-    // décoder chaque morceau séparément couperait les caractères accentués
-    // (é, è, à… = plusieurs octets) → affichage corrompu.
-    let bytes = new Uint8Array(0);
-    let metaParsed = false;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const merged = new Uint8Array(bytes.length + value.length);
-      merged.set(bytes); merged.set(value, bytes.length);
-      bytes = merged;
-      const text = decoder.decode(bytes);          // décodage complet → UTF-8 correct
-      const nl = text.indexOf('\n');
-      if (nl < 0) continue;
-      if (!metaParsed) {
-        try {
-          const meta = JSON.parse(text.slice(0, nl));
-          setMessages((prev) => prev.map((m) => m.id === botId ? { ...m, serverId: meta.id_message, sources: meta.sources ?? [] } : m));
-          setQuota({ illimite: !!meta.quota_illimite, restant: meta.quota_restant });
-        } catch {}
-        metaParsed = true;
-      }
-      targetRef.current = text.slice(nl + 1);
-    }
-  };
-
-  // Réponse en un bloc (vision + repli) → remplit targetRef d'un coup.
+  // Réponse en un bloc (JSON) → remplit targetRef ; le typewriter l'anime ensuite.
   const fillNonStream = async (text: string, img: string | null, botId: string) => {
     try {
       const res = await api.post('/chatbot/message/', {
@@ -167,8 +124,9 @@ export default function ChatbotScreen() {
     startTypewriter(botId);
 
     try {
-      if (img) await fillNonStream(text, img, botId);
-      else { try { await fillStream(text, botId); } catch { await fillNonStream(text, null, botId); } }
+      // Chemin non-streamé (JSON) : accents fiables. L'effet « machine à écrire »
+      // est assuré côté client par le typewriter qui révèle targetRef.
+      await fillNonStream(text, img, botId);
     } catch {
       targetRef.current = targetRef.current || "Désolé, une erreur est survenue.";
     } finally {
