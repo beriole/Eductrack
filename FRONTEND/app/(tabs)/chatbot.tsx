@@ -108,26 +108,30 @@ export default function ChatbotScreen() {
     }
     if (!resp.ok || !resp.body) throw new Error('stream indisponible');
     const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let pre = '', metaParsed = false;
+    const decoder = new TextDecoder('utf-8');
+    // On accumule les OCTETS et on décode le buffer COMPLET à chaque fois :
+    // décoder chaque morceau séparément couperait les caractères accentués
+    // (é, è, à… = plusieurs octets) → affichage corrompu.
+    let bytes = new Uint8Array(0);
+    let metaParsed = false;
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
+      const merged = new Uint8Array(bytes.length + value.length);
+      merged.set(bytes); merged.set(value, bytes.length);
+      bytes = merged;
+      const text = decoder.decode(bytes);          // décodage complet → UTF-8 correct
+      const nl = text.indexOf('\n');
+      if (nl < 0) continue;
       if (!metaParsed) {
-        pre += chunk;
-        const nl = pre.indexOf('\n');
-        if (nl < 0) continue;
         try {
-          const meta = JSON.parse(pre.slice(0, nl));
+          const meta = JSON.parse(text.slice(0, nl));
           setMessages((prev) => prev.map((m) => m.id === botId ? { ...m, serverId: meta.id_message, sources: meta.sources ?? [] } : m));
           setQuota({ illimite: !!meta.quota_illimite, restant: meta.quota_restant });
         } catch {}
-        targetRef.current = pre.slice(nl + 1);
         metaParsed = true;
-      } else {
-        targetRef.current += chunk;
       }
+      targetRef.current = text.slice(nl + 1);
     }
   };
 

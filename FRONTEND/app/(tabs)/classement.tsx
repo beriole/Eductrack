@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
 import { useAuthStore } from '@/src/store/authStore';
+import { GradientHeader } from '@/src/components/GradientHeader';
 import { colors, radius, spacing, shadow } from '@/src/theme';
 
 interface LeaderboardEntry {
@@ -73,24 +74,25 @@ export default function ClassementScreen() {
 
   return (
     <View style={styles.container}>
-      {/* En-tête */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Classement</Text>
-          <Text style={styles.subtitle}>Les meilleurs élèves</Text>
-        </View>
-        {user?.role === 'eleve' ? (
-          <TouchableOpacity style={styles.defisBtn} onPress={() => router.push('/defis')} activeOpacity={0.85}>
-            <Ionicons name="ribbon" size={15} color={colors.white} />
-            <Text style={styles.defisBtnText}>Défis</Text>
-          </TouchableOpacity>
-        ) : data?.ma_position ? (
-          <View style={styles.myRankPill}>
-            <Ionicons name="person" size={13} color={colors.primary} />
-            <Text style={styles.myRankText}>#{data.ma_position}</Text>
-          </View>
-        ) : null}
-      </View>
+      {/* En-tête dégradé */}
+      <GradientHeader
+        title="Classement"
+        subtitle="Les meilleurs élèves"
+        icon="trophy"
+        right={
+          user?.role === 'eleve' ? (
+            <TouchableOpacity style={styles.headerBtn} onPress={() => router.push('/defis')} activeOpacity={0.85}>
+              <Ionicons name="ribbon" size={15} color="#fff" />
+              <Text style={styles.headerBtnText}>Défis</Text>
+            </TouchableOpacity>
+          ) : data?.ma_position ? (
+            <View style={styles.headerBtn}>
+              <Ionicons name="person" size={13} color="#fff" />
+              <Text style={styles.headerBtnText}>#{data.ma_position}</Text>
+            </View>
+          ) : undefined
+        }
+      />
 
       {/* Filtres */}
       <View style={styles.filters}>
@@ -226,6 +228,8 @@ const styles = StyleSheet.create({
   myRankText: { fontSize: 14, fontWeight: '800', color: colors.primary },
   defisBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.primary, borderRadius: radius.full, paddingHorizontal: 14, paddingVertical: 8, ...shadow.sm },
   defisBtnText: { fontSize: 13, fontWeight: '800', color: colors.white },
+  headerBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 7 },
+  headerBtnText: { fontSize: 13, fontWeight: '800', color: '#fff' },
 
   filters: { paddingBottom: 4 },
   filterRow: { paddingHorizontal: spacing.md, paddingVertical: 6, gap: 8 },

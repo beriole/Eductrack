@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
 import { useAuthStore } from '@/src/store/authStore';
 import { SubjectGrid, SubjectEntry } from '@/src/components/SubjectGrid';
+import { GradientHeader } from '@/src/components/GradientHeader';
 import { colors, radius, spacing } from '@/src/theme';
 
 interface Epreuve {
@@ -47,34 +48,25 @@ export default function ExamensScreen() {
   const open = (s: SubjectEntry) =>
     router.push(`/matiere/${s.id}?mode=examens&nom=${encodeURIComponent(s.nom)}&code=${encodeURIComponent(s.code)}` as any);
 
-  const Header = (
-    <View style={styles.header}>
-      <Text style={styles.title}>Examens</Text>
-      {user?.role === 'eleve' && user?.niveau_scolaire ? (
-        <View style={styles.programmePill}>
-          <Ionicons name="school-outline" size={13} color={colors.primary} />
-          <Text style={styles.programmePillText}>Programme {user.niveau_scolaire}</Text>
-        </View>
-      ) : null}
-      <Text style={styles.hint}>Choisis une matière pour voir ses annales, simulations et exercices.</Text>
-    </View>
-  );
-
-  if (loading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
-  }
+  const subtitle = user?.niveau_scolaire
+    ? `Programme ${user.niveau_scolaire} · annales, simulations & exercices`
+    : 'Choisis une matière pour voir ses épreuves';
 
   return (
     <View style={styles.container}>
-      <SubjectGrid
-        subjects={subjects}
-        onPress={open}
-        header={Header}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        emptyLabel="Aucune épreuve pour ta classe."
-        countLabel={(n) => `${n} épreuve${n > 1 ? 's' : ''}`}
-      />
+      <GradientHeader title="Examens" subtitle={subtitle} icon="create" />
+      {loading ? (
+        <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>
+      ) : (
+        <SubjectGrid
+          subjects={subjects}
+          onPress={open}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          emptyLabel="Aucune épreuve pour ta classe."
+          countLabel={(n) => `${n} épreuve${n > 1 ? 's' : ''}`}
+        />
+      )}
     </View>
   );
 }

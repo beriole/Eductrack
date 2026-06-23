@@ -6,11 +6,37 @@ import { colors } from '@/src/theme';
  * Gère : #/##/### titres, listes -/•/1., **gras**, `code`, et nettoie les
  * délimiteurs LaTeX ($...$) pour rester lisible.
  */
+const SUP: Record<string, string> = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '+': '⁺', '-': '⁻', 'n': 'ⁿ', 'i': 'ⁱ' };
+const SYM: Record<string, string> = {
+  '\\times': '×', '\\div': '÷', '\\cdot': '·', '\\pm': '±', '\\mp': '∓',
+  '\\leq': '≤', '\\le': '≤', '\\geq': '≥', '\\ge': '≥', '\\neq': '≠', '\\ne': '≠',
+  '\\approx': '≈', '\\equiv': '≡', '\\infty': '∞', '\\partial': '∂', '\\nabla': '∇',
+  '\\pi': 'π', '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\delta': 'δ', '\\theta': 'θ',
+  '\\lambda': 'λ', '\\mu': 'µ', '\\sigma': 'σ', '\\phi': 'φ', '\\omega': 'ω',
+  '\\Delta': 'Δ', '\\Sigma': 'Σ', '\\Omega': 'Ω', '\\sum': 'Σ', '\\prod': 'Π', '\\int': '∫',
+  '\\rightarrow': '→', '\\to': '→', '\\leftarrow': '←', '\\Rightarrow': '⇒', '\\Leftrightarrow': '⇔',
+  '\\in': '∈', '\\notin': '∉', '\\subset': '⊂', '\\cup': '∪', '\\cap': '∩',
+  '\\forall': '∀', '\\exists': '∃', '\\sqrt': '√',
+};
+
+/** Convertit le LaTeX résiduel en Unicode lisible (sans WebView). */
+function mathify(s: string): string {
+  let t = s.replace(/\$\$([^$]+)\$\$/g, '$1').replace(/\$([^$]+)\$/g, '$1');
+  t = t.replace(/\\\\/g, '\n');                                  // saut de ligne LaTeX
+  for (let i = 0; i < 4; i++) t = t.replace(/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, '($1)/($2)');
+  t = t.replace(/\\sqrt\s*\{([^{}]+)\}/g, '√($1)');
+  t = t.replace(/\^\{([^{}]+)\}/g, '^($1)').replace(/_\{([^{}]+)\}/g, '_($1)');
+  t = t.replace(/\^([0-9n+\-i])/g, (_, c) => SUP[c] ?? `^${c}`);
+  for (const k in SYM) t = t.split(k).join(SYM[k]);
+  t = t.replace(/\\left|\\right|\\,|\\;|\\!|\\:|\\quad|\\qquad/g, '');
+  t = t.replace(/\\([a-zA-Z]+)/g, '$1');                          // commande inconnue → nom
+  t = t.replace(/[{}]/g, '').replace(/\\/g, '');                  // accolades & backslashs restants
+  return t;
+}
+
 function inline(text: string, keyBase: string) {
-  // Retire les délimiteurs maths $...$ / $$...$$ (on garde le contenu).
-  const clean = text.replace(/\$\$([^$]+)\$\$/g, '$1').replace(/\$([^$]+)\$/g, '$1');
   // Découpe sur **gras** et `code`.
-  return clean.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean).map((p, i) => {
+  return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean).map((p, i) => {
     if (p.startsWith('**') && p.endsWith('**')) {
       return <Text key={`${keyBase}-${i}`} style={styles.bold}>{p.slice(2, -2)}</Text>;
     }
@@ -22,7 +48,7 @@ function inline(text: string, keyBase: string) {
 }
 
 export function RichText({ text, color = colors.text, size = 15 }: { text: string; color?: string; size?: number }) {
-  const lines = (text || '').replace(/\r/g, '').split('\n');
+  const lines = mathify(text || '').replace(/\r/g, '').split('\n');
   return (
     <View>
       {lines.map((raw, idx) => {

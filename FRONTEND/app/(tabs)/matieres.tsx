@@ -6,6 +6,7 @@ import { api } from '@/src/lib/api';
 import { useAuthStore } from '@/src/store/authStore';
 import { SubjectGrid, SubjectEntry } from '@/src/components/SubjectGrid';
 import { SkeletonList } from '@/src/components/Skeleton';
+import { GradientHeader } from '@/src/components/GradientHeader';
 import { colors, radius, spacing, shadow } from '@/src/theme';
 
 interface Cours {
@@ -53,46 +54,39 @@ export default function MatieresScreen() {
   const open = (s: SubjectEntry) =>
     router.push(`/matiere/${s.id}?mode=cours&nom=${encodeURIComponent(s.nom)}&code=${encodeURIComponent(s.code)}` as any);
 
-  const Header = (
-    <View>
-      <View style={styles.header}>
-        <Text style={styles.title}>Mes cours</Text>
-        {user?.role === 'eleve' && user?.niveau_scolaire ? (
-          <View style={styles.programmePill}>
-            <Ionicons name="school" size={13} color={colors.primary} />
-            <Text style={styles.programmePillText}>Programme {user.niveau_scolaire}</Text>
-          </View>
-        ) : null}
-      </View>
-      <Text style={styles.hint}>Choisis une matière pour voir ses cours.</Text>
-      <View style={styles.searchBar}>
-        <Ionicons name="search" size={18} color={colors.textLight} style={{ marginRight: spacing.sm }} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Rechercher une matière…"
-          placeholderTextColor={colors.textLight}
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
+  const subtitle = user?.niveau_scolaire
+    ? `Programme ${user.niveau_scolaire} · choisis une matière`
+    : 'Choisis une matière pour voir ses cours';
+
+  const SearchBar = (
+    <View style={styles.searchBar}>
+      <Ionicons name="search" size={18} color={colors.textLight} style={{ marginRight: spacing.sm }} />
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Rechercher une matière…"
+        placeholderTextColor={colors.textLight}
+        value={search}
+        onChangeText={setSearch}
+      />
     </View>
   );
 
-  if (loading) {
-    return <View style={styles.container}><SkeletonList count={6} /></View>;
-  }
-
   return (
     <View style={styles.container}>
-      <SubjectGrid
-        subjects={subjects}
-        onPress={open}
-        header={Header}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        emptyLabel="Aucun cours disponible pour ta classe."
-        countLabel={(n) => `${n} cours`}
-      />
+      <GradientHeader title="Mes cours" subtitle={subtitle} icon="book" />
+      {loading ? (
+        <SkeletonList count={6} />
+      ) : (
+        <SubjectGrid
+          subjects={subjects}
+          onPress={open}
+          header={SearchBar}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          emptyLabel="Aucun cours disponible pour ta classe."
+          countLabel={(n) => `${n} cours`}
+        />
+      )}
     </View>
   );
 }

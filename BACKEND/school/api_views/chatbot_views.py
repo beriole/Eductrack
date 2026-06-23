@@ -106,7 +106,8 @@ def _construire_system(eleve, user, matiere, mode, contexte_rag):
             f"in {niveau}{serie} ({cycle}). Always reply in ENGLISH, adapting vocabulary and "
             f"difficulty to this exact class — never childish for upper classes, never off-syllabus. "
             f"Stay strictly within the Cameroonian GCE programme and school subjects. "
-            f"Use LaTeX between $...$ for math. Be concise (max 3 short paragraphs)."
+            f"Write maths in plain text with Unicode symbols (×, ÷, √, ≤, ≥, ≠, π, "
+            f"exponents ², ³…), NOT LaTeX. Be concise (max 3 short paragraphs)."
         )
         guide = ("TEACHING MODE: guide the student step by step with questions and hints; "
                  "do NOT give the final answer directly unless they insist.")
@@ -119,7 +120,8 @@ def _construire_system(eleve, user, matiere, mode, contexte_rag):
             f"{niveau}{serie} ({cycle}). Réponds TOUJOURS en français, en adaptant le vocabulaire "
             f"et la difficulté EXACTEMENT à cette classe — jamais enfantin pour les grandes classes, "
             f"jamais hors-programme. Reste strictement dans le programme camerounais (MINESEC) et les "
-            f"sujets scolaires. Utilise LaTeX entre $...$ pour les maths. Sois concis (3 paragraphes max)."
+            f"sujets scolaires. Écris les maths en clair avec des symboles Unicode (×, ÷, √, ≤, ≥, ≠, "
+            f"π, exposants ², ³…), PAS de LaTeX. Sois concis (3 paragraphes max)."
         )
         guide = ("MODE PÉDAGOGIQUE : guide l'élève pas à pas par des questions et des indices ; "
                  "ne donne PAS la réponse finale directement, sauf s'il insiste.")

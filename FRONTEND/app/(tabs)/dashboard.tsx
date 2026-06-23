@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
+  View, Text, StyleSheet, ScrollView, Image,
   TouchableOpacity, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -8,8 +8,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/src/store/authStore';
 import { useI18n } from '@/src/i18n/useI18n';
 import { colors, radius, shadow } from '@/src/theme';
-import { api } from '@/src/lib/api';
+import { api, BASE_URL } from '@/src/lib/api';
 import { TeacherHome } from '@/src/components/TeacherHome';
+
+// Les avatars uploadés sont servis en chemin relatif (/media/…) → on préfixe.
+const MEDIA_ORIGIN = BASE_URL.replace(/\/api\/v1\/?$/, '');
+const resolveAvatar = (url?: string | null) =>
+  !url ? null : url.startsWith('http') ? url : `${MEDIA_ORIGIN}${url}`;
 import { AdminHome } from '@/src/components/AdminHome';
 
 interface DashboardData {
@@ -113,6 +118,7 @@ export default function DashboardScreen() {
       <Header
         prenom={user?.prenom}
         subtitle={t('dashboard.subtitle')}
+        avatarUrl={user?.avatar_url}
         right={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {!user?.email_verifie ? (
@@ -269,14 +275,17 @@ export default function DashboardScreen() {
 
 // ── Sous-composants ──
 
-function Header({ prenom, subtitle, right }: { prenom?: string; subtitle: string; right?: React.ReactNode }) {
+function Header({ prenom, subtitle, right, avatarUrl }: { prenom?: string; subtitle: string; right?: React.ReactNode; avatarUrl?: string | null }) {
   const router = useRouter();
   const initial = (prenom?.[0] ?? '?').toUpperCase();
+  const uri = resolveAvatar(avatarUrl);
   const h = new Date().getHours();
   const salut = h < 5 ? 'Bonne nuit' : h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
   return (
     <View style={styles.header}>
-      <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>
+      {uri
+        ? <Image source={{ uri }} style={styles.avatar} />
+        : <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>}
       <View style={{ flex: 1 }}>
         <Text style={styles.greeting}>{salut}, {prenom} 👋</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
