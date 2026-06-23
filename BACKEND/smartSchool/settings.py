@@ -258,6 +258,7 @@ except Exception:
 # Groq (API OpenAI-compatible, gratuite et très rapide) — fournisseur par défaut.
 GROQ_API_KEY = env('GROQ_API_KEY', default='')
 GROQ_MODEL = env('GROQ_MODEL', default='llama-3.3-70b-versatile')
+GROQ_VISION_MODEL = env('GROQ_VISION_MODEL', default='meta-llama/llama-4-scout-17b-16e-instruct')
 # Autres fournisseurs (optionnels, non utilisés par défaut).
 ANTHROPIC_API_KEY = env('ANTHROPIC_API_KEY', default='')
 OPENAI_API_KEY = env('OPENAI_API_KEY', default='')

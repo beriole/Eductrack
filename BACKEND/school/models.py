@@ -543,6 +543,8 @@ class MessagesChatbot(models.Model):
     id_matiere = models.ForeignKey(Matieres, on_delete=models.SET_NULL, null=True, blank=True, related_name='messages_chatbot')
     session_chat = models.UUIDField(blank=True, null=True)
     nb_tokens = models.PositiveIntegerField(blank=True, null=True)
+    utile = models.BooleanField(null=True, blank=True,
+                                help_text="Retour de l'élève sur une réponse de l'assistant (👍/👎).")
     horodatage = models.DateTimeField(auto_now_add=True)
 
     class Meta:
