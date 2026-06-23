@@ -29,15 +29,21 @@ def _fapshi_headers():
     }
 
 
-def _initiate_fapshi_payment(amount: int, phone: str, description: str, redirect_url: str = '') -> dict:
+def _direct_pay(amount: int, phone: str, description: str, user, external_id: str = '') -> dict:
+    """Paiement DIRECT Fapshi : l'invite MoMo/Orange Money est poussée
+    directement sur le téléphone de l'utilisateur (aucune page web)."""
+    nom = f"{user.prenom} {user.nom}".strip() or user.email
     payload = {
-        'amount': amount,
+        'amount': int(amount),
         'phone': phone,
+        'name': nom,
+        'email': user.email,
+        'userId': str(user.id_utilisateur),
+        'externalId': external_id,
         'message': description,
-        'redirectUrl': redirect_url or settings.FRONTEND_URL,
     }
     resp = requests.post(
-        f"{settings.FAPSHI_BASE_URL}/initiatepayment",
+        f"{settings.FAPSHI_BASE_URL}/direct-pay",
         json=payload,
         headers=_fapshi_headers(),
         timeout=15,
@@ -48,7 +54,7 @@ def _initiate_fapshi_payment(amount: int, phone: str, description: str, redirect
 
 def _check_fapshi_status(trans_id: str) -> dict:
     resp = requests.get(
-        f"{settings.FAPSHI_BASE_URL}/paymentstatus/{trans_id}",
+        f"{settings.FAPSHI_BASE_URL}/payment-status/{trans_id}",
         headers=_fapshi_headers(),
         timeout=10,
     )
@@ -136,9 +142,9 @@ class PaiementInitierView(APIView):
             }, status=status.HTTP_200_OK)
 
         try:
-            result = _initiate_fapshi_payment(montant, phone, description)
+            result = _direct_pay(montant, phone, description, request.user, reference)
         except requests.RequestException as exc:
-            logger.error("Fapshi initiation error: %s", exc)
+            logger.error("Fapshi direct-pay error: %s", exc)
             return Response({"error": "Erreur de connexion au service de paiement."}, status=status.HTTP_502_BAD_GATEWAY)
 
         ref = result.get('transId', reference)
@@ -148,9 +154,9 @@ class PaiementInitierView(APIView):
 
         return Response({
             "trans_id": ref,
-            "link": result.get('link'),
             "montant": montant,
             "reference": reference,
+            "message": "Invite de paiement envoyée sur votre téléphone.",
         }, status=status.HTTP_200_OK)
 
 

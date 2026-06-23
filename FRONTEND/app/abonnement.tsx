@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
 import { api } from '@/src/lib/api';
 import { colors, radius } from '@/src/theme';
 
@@ -94,15 +93,9 @@ export default function AbonnementScreen() {
         phone: phone.trim(),
       });
       setTransId(res.data.trans_id);
-      // Si Fapshi renvoie une page de paiement, on l'ouvre directement.
-      if (res.data.link) {
-        try { await WebBrowser.openBrowserAsync(res.data.link); } catch {}
-      }
       Alert.alert(
-        'Paiement initié',
-        res.data.link
-          ? `Finalisez le paiement de ${res.data.montant} FCFA dans la page ouverte, puis appuyez sur « Vérifier ».`
-          : `Confirmez le paiement de ${res.data.montant} FCFA sur votre téléphone (${phone.trim()}), puis appuyez sur « Vérifier ».`,
+        'Validez sur votre téléphone',
+        `Une demande de paiement de ${res.data.montant} FCFA a été envoyée au ${phone.trim()}.\n\nSaisissez votre code PIN MoMo / Orange Money, puis appuyez sur « Vérifier ».`,
         [
           { text: 'Vérifier', onPress: () => pollStatut(res.data.trans_id) },
           { text: 'Plus tard', style: 'cancel' },
