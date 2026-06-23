@@ -70,6 +70,20 @@ def _activer_abonnement(paiement):
     abonnement = paiement.id_abonnement
     abonnement.statut = 'actif'
     abonnement.save(update_fields=['statut'])
+
+    # Notification push (FCM/Expo) + entrée dans la cloche, à la confirmation.
+    try:
+        from school.utils import notify_user
+        notify_user(
+            abonnement.id_utilisateur,
+            "Paiement confirmé ✅",
+            f"Ton abonnement {abonnement.formule.capitalize()} est actif "
+            f"jusqu'au {abonnement.date_expiration.strftime('%d/%m/%Y')}. Bonne réussite !",
+            type_notif='promo',
+            data={'type': 'abonnement', 'formule': abonnement.formule},
+        )
+    except Exception as exc:  # le push ne doit jamais bloquer la confirmation
+        logger.warning("Push confirmation paiement KO: %s", exc)
     return abonnement
 
 
