@@ -9,11 +9,12 @@ Améliorations clés :
 - Quota par formule d'abonnement + mémoire résumée des longues conversations.
 """
 import uuid
-import base64
+import json
 import logging
 
 from django.core.cache import cache
 from django.db.models import Q
+from django.http import StreamingHttpResponse
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -246,6 +247,76 @@ class ChatbotMessageView(APIView):
             "quota_illimite": illimite,
             "quota_restant": restant,
         }, status=status.HTTP_200_OK)
+
+
+class ChatbotStreamView(APIView):
+    """POST /chatbot/message/stream/ — réponse EduBot en flux (tokens en direct).
+
+    Renvoie d'abord une ligne JSON de métadonnées (session, id du message,
+    sources), puis le texte généré au fil de l'eau. Repli côté client si le flux
+    n'est pas supporté."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != 'eleve':
+            return Response({"error": "Réservé aux élèves."}, status=status.HTTP_403_FORBIDDEN)
+        eleve = Eleves.objects.filter(id_utilisateur=request.user.id_utilisateur).first()
+        if not eleve:
+            return Response({"error": "Profil élève introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
+        contenu = (request.data.get('contenu') or '').strip()
+        if not contenu:
+            return Response({"error": "Message vide."}, status=status.HTTP_400_BAD_REQUEST)
+
+        illimite, restant = _quota_restant(eleve, request.user)
+        if not illimite and restant <= 0:
+            return Response({"error": "Limite quotidienne atteinte (Basic).", "quota_atteint": True},
+                            status=status.HTTP_402_PAYMENT_REQUIRED)
+
+        mode = request.data.get('mode') if request.data.get('mode') in ('guide', 'direct') else 'guide'
+        matiere = Matieres.objects.filter(code=request.data.get('matiere_code')).first() if request.data.get('matiere_code') else None
+        session_chat = request.data.get('session_chat') or str(uuid.uuid4())
+
+        contexte_rag, sources = _rag(eleve, contenu, matiere)
+        system = _construire_system(eleve, request.user, matiere, mode, contexte_rag)
+
+        MessagesChatbot.objects.create(id_eleve=eleve, role='user', contenu=contenu,
+                                       id_matiere=matiere, session_chat=session_chat)
+        assistant_msg = MessagesChatbot.objects.create(id_eleve=eleve, role='assistant', contenu='',
+                                                       id_matiere=matiere, session_chat=session_chat)
+
+        total = MessagesChatbot.objects.filter(id_eleve=eleve, session_chat=session_chat).count()
+        resume = _resume_memoire(eleve, session_chat, total)
+        if resume:
+            system += f"\n\nRÉSUMÉ : {resume}"
+        historique = list(MessagesChatbot.objects.filter(id_eleve=eleve, session_chat=session_chat)
+                          .exclude(id_message=assistant_msg.id_message)
+                          .order_by('-horodatage')[:HISTORY_WINDOW])
+        messages_api = [{"role": m.role, "content": m.contenu} for m in reversed(historique)]
+
+        _, restant_apres = _quota_restant(eleve, request.user)
+
+        def flux():
+            meta = {"session_chat": session_chat, "id_message": str(assistant_msg.id_message),
+                    "sources": sources, "mode": mode,
+                    "quota_illimite": illimite, "quota_restant": restant_apres}
+            yield json.dumps(meta) + "\n"
+            morceaux = []
+            try:
+                for delta in ai_service.chat_stream(messages_api, system=system, max_tokens=1024):
+                    morceaux.append(delta)
+                    yield delta
+            except ai_service.AIUnavailable:
+                msg = "EduBot a un souci de connexion. Réessaie dans un instant."
+                morceaux.append(msg)
+                yield msg
+            assistant_msg.contenu = ''.join(morceaux) or '...'
+            assistant_msg.save(update_fields=['contenu'])
+
+        resp = StreamingHttpResponse(flux(), content_type='text/plain; charset=utf-8')
+        resp['Cache-Control'] = 'no-cache'
+        resp['X-Accel-Buffering'] = 'no'  # désactive le buffering (nginx)
+        return resp
 
 
 class ChatbotHistoriqueView(generics.ListAPIView):

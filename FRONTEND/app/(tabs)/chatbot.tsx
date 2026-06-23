@@ -6,7 +6,9 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { api } from '@/src/lib/api';
+import * as SecureStore from 'expo-secure-store';
+import { fetch as expoFetch } from 'expo/fetch';
+import { api, BASE_URL } from '@/src/lib/api';
 import { useAuthStore } from '@/src/store/authStore';
 import { RichText } from '@/src/components/RichText';
 import { colors, radius, shadow, subjectColor } from '@/src/theme';
@@ -63,29 +65,16 @@ export default function ChatbotScreen() {
     if (!res.canceled && res.assets?.[0]?.base64) setPhoto(res.assets[0].base64);
   };
 
-  const send = async () => {
-    const text = input.trim();
-    if ((!text && !photo) || sending) return;
-    setInput('');
-    const img = photo; setPhoto(null);
-
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', contenu: text || '📸 Exercice', image: img ?? undefined };
-    setMessages((prev) => [...prev, userMsg]);
-    setSending(true);
-
+  // Réponse classique (un bloc) — sert au mode photo (vision) et de repli.
+  const sendNonStream = async (text: string, img: string | null) => {
     try {
       const res = await api.post('/chatbot/message/', {
-        contenu: text,
-        session_chat: sessionRef.current,
-        mode,
+        contenu: text, session_chat: sessionRef.current, mode,
         ...(img ? { image_base64: img } : {}),
       }, { timeout: 60000 });
       setMessages((prev) => [...prev, {
-        id: res.data.reponse.id_message,
-        role: 'assistant',
-        contenu: res.data.reponse.contenu,
-        sources: res.data.sources ?? [],
-        utile: null,
+        id: res.data.reponse.id_message, role: 'assistant',
+        contenu: res.data.reponse.contenu, sources: res.data.sources ?? [], utile: null,
       }]);
       setQuota({ illimite: !!res.data.quota_illimite, restant: res.data.quota_restant });
     } catch (e: any) {
@@ -96,6 +85,75 @@ export default function ChatbotScreen() {
           ? "Tu as atteint ta limite quotidienne (formule Basic). Passe à **Standard** pour un accès illimité à EduBot."
           : "Désolé, je ne peux pas répondre pour l'instant. Réessaie dans un moment.",
       }]);
+    }
+  };
+
+  // Réponse en flux (tokens en direct). Lève une erreur AVANT le flux → repli.
+  const sendStream = async (text: string) => {
+    const token = await SecureStore.getItemAsync('access_token');
+    const resp = await expoFetch(`${BASE_URL}/chatbot/message/stream/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ contenu: text, session_chat: sessionRef.current, mode }),
+    });
+    if (resp.status === 402) {
+      setMessages((prev) => [...prev, {
+        id: 'err-' + Date.now(), role: 'assistant',
+        contenu: "Tu as atteint ta limite quotidienne (formule Basic). Passe à **Standard** pour un accès illimité à EduBot.",
+      }]);
+      return;
+    }
+    if (!resp.ok || !resp.body) throw new Error('stream indisponible');
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    const botId = 'stream-' + Date.now();
+    setMessages((prev) => [...prev, { id: botId, role: 'assistant', contenu: '', utile: null }]);
+
+    let pre = '', content = '', metaParsed = false, realId = botId;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        if (!metaParsed) {
+          pre += chunk;
+          const nl = pre.indexOf('\n');
+          if (nl < 0) continue;
+          try {
+            const meta = JSON.parse(pre.slice(0, nl));
+            realId = meta.id_message || botId;
+            setMessages((prev) => prev.map((m) => m.id === botId ? { ...m, id: realId, sources: meta.sources ?? [] } : m));
+            setQuota({ illimite: !!meta.quota_illimite, restant: meta.quota_restant });
+          } catch {}
+          content = pre.slice(nl + 1);
+          metaParsed = true;
+          setMessages((prev) => prev.map((m) => m.id === realId ? { ...m, contenu: content } : m));
+        } else {
+          content += chunk;
+          setMessages((prev) => prev.map((m) => m.id === realId ? { ...m, contenu: content } : m));
+        }
+      }
+    } catch {
+      setMessages((prev) => prev.map((m) => m.id === realId ? { ...m, contenu: content + ' …(interrompu)' } : m));
+    }
+  };
+
+  const send = async () => {
+    const text = input.trim();
+    if ((!text && !photo) || sending) return;
+    setInput('');
+    const img = photo; setPhoto(null);
+
+    setMessages((prev) => [...prev, { id: Date.now().toString(), role: 'user', contenu: text || '📸 Exercice', image: img ?? undefined }]);
+    setSending(true);
+    try {
+      if (img) {
+        await sendNonStream(text, img);          // vision : pas de flux
+      } else {
+        try { await sendStream(text); }
+        catch { await sendNonStream(text, null); } // repli si flux non supporté
+      }
     } finally {
       setSending(false);
     }

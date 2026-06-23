@@ -7,6 +7,7 @@ fonctionne donc toujours, avec ou sans IA.
 Tout le projet passe par ce module (assistant d'examen, EduBot, etc.) : changer
 de fournisseur IA ne nécessite que de modifier ce fichier.
 """
+import json
 import logging
 import time
 import requests
@@ -107,6 +108,43 @@ def chat_vision(prompt: str, image_data_url: str, system: str = "", *,
 
 def is_vision_configured() -> bool:
     return is_configured()
+
+
+def chat_stream(messages: list, system: str = "", *, model: str = None,
+                max_tokens: int = 1024, temperature: float = 0.7, timeout: int = 60):
+    """Génère la réponse Groq en flux (SSE) : produit les fragments de texte au fur
+    et à mesure. Lève AIUnavailable si la clé manque ou si l'API échoue."""
+    api_key = getattr(settings, 'GROQ_API_KEY', '') or ''
+    if not api_key:
+        raise AIUnavailable("Clé Groq absente.")
+    payload_messages = []
+    if system:
+        payload_messages.append({"role": "system", "content": system})
+    payload_messages.extend(messages)
+    payload = {
+        "model": model or getattr(settings, 'GROQ_MODEL', 'llama-3.3-70b-versatile'),
+        "messages": payload_messages, "max_tokens": max_tokens,
+        "temperature": temperature, "stream": True,
+    }
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    try:
+        resp = requests.post(GROQ_ENDPOINT, headers=headers, json=payload, stream=True, timeout=timeout)
+    except requests.RequestException as exc:
+        raise AIUnavailable("Réseau indisponible.") from exc
+    if resp.status_code != 200:
+        raise AIUnavailable(f"Groq HTTP {resp.status_code}.")
+    for line in resp.iter_lines(decode_unicode=True):
+        if not line or not line.startswith('data: '):
+            continue
+        data = line[6:].strip()
+        if data == '[DONE]':
+            break
+        try:
+            delta = json.loads(data)['choices'][0]['delta'].get('content')
+        except (ValueError, KeyError, IndexError):
+            continue
+        if delta:
+            yield delta
 
 
 def generate(prompt: str, system: str = "", *, max_tokens: int = 512, temperature: float = 0.7, timeout: int = 30) -> str:

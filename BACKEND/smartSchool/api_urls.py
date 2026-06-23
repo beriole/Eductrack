@@ -28,7 +28,7 @@ from school.api_views.gamification_views import XPView, BadgeListView, MesBadges
 from school.api_views.analytique_views import DiagnosticListView, LacuneListView, LacuneDetailView, LacuneDetecterView, DashboardView
 from school.api_views.session_views import SessionDemarrerView, SessionReponsesView, SessionTerminerView, SessionHistoriqueView, SessionDetailView, SessionCorrectionView
 from school.api_views.notification_views import NotificationListView, NotificationMarkReadView, NotificationMarkAllReadView, NotificationCountView
-from school.api_views.chatbot_views import ChatbotMessageView, ChatbotHistoriqueView, ChatbotFeedbackView
+from school.api_views.chatbot_views import ChatbotMessageView, ChatbotHistoriqueView, ChatbotFeedbackView, ChatbotStreamView
 from school.api_views.focus_views import FocusStartView, FocusStopView, FocusListView
 from school.api_views.payment_views import PaiementInitierView, PaiementStatutView, AbonnementListView, AbonnementActifView, FapshiWebhookView
 from school.api_views.planning_views import PlanningCreateView, PlanningActifView, PlanningListView, SessionEtudeCompleterView
@@ -169,6 +169,7 @@ urlpatterns = [
 
     # ── Chatbot IA ────────────────────────────────────────────────────────────
     path('chatbot/message/', ChatbotMessageView.as_view(), name='api-chatbot-message'),
+    path('chatbot/message/stream/', ChatbotStreamView.as_view(), name='api-chatbot-stream'),
     path('chatbot/historique/', ChatbotHistoriqueView.as_view(), name='api-chatbot-historique'),
     path('chatbot/messages/<uuid:id_message>/feedback/', ChatbotFeedbackView.as_view(), name='api-chatbot-feedback'),
 
