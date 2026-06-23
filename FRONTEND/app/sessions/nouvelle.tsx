@@ -28,6 +28,13 @@ const VF_OPTIONS = [
   { key: 'faux', texte: 'Faux' },
 ];
 
+// Temps accordé par question (secondes), selon le type. Passé ce délai, la
+// question se verrouille et ses points sont perdus.
+const TEMPS_PAR_TYPE: Record<string, number> = {
+  qcm: 45, vrai_faux: 30, reponse_courte: 90, redaction: 180,
+};
+const budgetQuestion = (q: Question) => (TEMPS_PAR_TYPE[q.type_question] ?? 45) * Math.max(1, q.points || 1);
+
 export default function NouvelleSessionScreen() {
   const { epreuveId, mode = 'exercice', duree, revision } = useLocalSearchParams<{ epreuveId: string; mode?: string; duree?: string; revision?: string }>();
   const router = useRouter();
@@ -59,6 +66,12 @@ export default function NouvelleSessionScreen() {
   const submittedRef = useRef(false);
   answersRef.current = answers;
 
+  // Minuterie par question : temps restant par question + verrouillage à 0.
+  const timeLeftRef = useRef<Record<string, number>>({});
+  const expiredRef = useRef<Record<string, boolean>>({});
+  const [expired, setExpired] = useState<Record<string, boolean>>({});
+  const [qLeft, setQLeft] = useState(0);
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -70,7 +83,12 @@ export default function NouvelleSessionScreen() {
         sessionRef.current = sess;
         const questionsRes = await api.get(`/epreuves/${epreuveId}/questions/`);
         const qs = questionsRes.data.results ?? questionsRes.data;
-        setQuestions(qs.sort((a: Question, b: Question) => a.numero_ordre - b.numero_ordre));
+        const sorted: Question[] = qs.sort((a: Question, b: Question) => a.numero_ordre - b.numero_ordre);
+        setQuestions(sorted);
+        const tl: Record<string, number> = {};
+        sorted.forEach((qq) => { tl[qq.id_question] = budgetQuestion(qq); });
+        timeLeftRef.current = tl;
+        setQLeft(sorted.length ? tl[sorted[0].id_question] : 0);
         startTimeRef.current = Date.now();
       } catch {
         Alert.alert('Erreur', 'Impossible de démarrer la session.', [{ text: 'Retour', onPress: () => router.back() }]);
@@ -100,8 +118,39 @@ export default function NouvelleSessionScreen() {
     return () => clearInterval(t);
   }, [loading, questions.length]);
 
+  // Réinitialise l'affichage du temps restant à chaque changement de question.
+  useEffect(() => {
+    if (!questions.length) return;
+    const id = questions[currentIndex].id_question;
+    setQLeft(timeLeftRef.current[id] ?? budgetQuestion(questions[currentIndex]));
+  }, [currentIndex, questions.length]);
+
+  // Décompte de la question courante : gelé si déjà répondue ou expirée.
+  // À 0 → verrouillage (points perdus) puis passage automatique à la suivante.
+  useEffect(() => {
+    if (loading || !questions.length) return;
+    const id = questions[currentIndex].id_question;
+    const tick = setInterval(() => {
+      const answered = answersRef.current[id] != null && answersRef.current[id] !== '';
+      if (answered || expiredRef.current[id]) return;
+      const next = Math.max(0, (timeLeftRef.current[id] ?? 0) - 1);
+      timeLeftRef.current[id] = next;
+      setQLeft(next);
+      if (next === 0) {
+        expiredRef.current[id] = true;
+        setExpired((e) => ({ ...e, [id]: true }));
+        clearInterval(tick);
+        setTimeout(() => {
+          setCurrentIndex((ci) => (ci < questions.length - 1 ? ci + 1 : ci));
+        }, 1200);
+      }
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [currentIndex, loading, questions.length]);
+
   const handleAnswer = (key: string) => {
     const q = questions[currentIndex];
+    if (expiredRef.current[q.id_question]) return; // temps écoulé → verrouillé
     setAnswers((prev) => ({ ...prev, [q.id_question]: key }));
   };
 
@@ -188,6 +237,11 @@ export default function NouvelleSessionScreen() {
   const isFirst = currentIndex === 0;
   const currentAnswer = answers[q.id_question];
 
+  // Verrouillage de la question (temps écoulé) + urgence d'affichage.
+  const locked = !!expired[q.id_question];
+  const qAnswered = currentAnswer != null && currentAnswer !== '';
+  const qUrgent = qLeft <= 10 && !locked && !qAnswered;
+
   // Normaliser les options selon le type de question.
   // On déduplique : l'IA génère parfois des options identiques, ce qui casse
   // la sélection (clé dupliquée) et l'affichage.
@@ -237,18 +291,34 @@ export default function NouvelleSessionScreen() {
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <View style={styles.qHeaderRow}>
           <Text style={styles.qNumber}>Question {currentIndex + 1}<Text style={styles.qTotal}> / {questions.length}</Text></Text>
-          <View style={styles.pointsBadge}><Text style={styles.pointsText}>{q.points} pt{q.points > 1 ? 's' : ''}</Text></View>
+          <View style={styles.qHeaderRight}>
+            <View style={[styles.qTimer, qUrgent && styles.qTimerUrgent, locked && styles.qTimerExpired, qAnswered && styles.qTimerDone]}>
+              <Ionicons name={locked ? 'lock-closed' : qAnswered ? 'checkmark' : 'hourglass-outline'} size={13}
+                color={locked ? colors.danger : qAnswered ? colors.success : qUrgent ? colors.danger : colors.text} />
+              <Text style={[styles.qTimerText, qUrgent && { color: colors.danger }, locked && { color: colors.danger }, qAnswered && { color: colors.success }]}>
+                {locked ? '0:00' : `${Math.floor(qLeft / 60)}:${String(qLeft % 60).padStart(2, '0')}`}
+              </Text>
+            </View>
+            <View style={styles.pointsBadge}><Text style={styles.pointsText}>{q.points} pt{q.points > 1 ? 's' : ''}</Text></View>
+          </View>
         </View>
 
         <Text style={styles.enonce}>{q.enonce}</Text>
 
+        {locked && (
+          <View style={styles.expiredBanner}>
+            <Ionicons name="alert-circle" size={18} color={colors.danger} />
+            <Text style={styles.expiredText}>Temps écoulé — les points de cette question sont perdus.</Text>
+          </View>
+        )}
+
         {options.length > 0 ? (
-          <View style={styles.optionsContainer}>
+          <View style={[styles.optionsContainer, locked && styles.lockedBlock]}>
             {options.map((opt, i) => {
               const selected = currentAnswer === opt.key;
               const letter = String.fromCharCode(65 + i);
               return (
-                <TouchableOpacity key={`${i}-${opt.key}`} style={[styles.option, selected && styles.optionSelected]} onPress={() => handleAnswer(opt.key)} activeOpacity={0.8}>
+                <TouchableOpacity key={`${i}-${opt.key}`} style={[styles.option, selected && styles.optionSelected]} onPress={() => handleAnswer(opt.key)} activeOpacity={0.8} disabled={locked}>
                   <View style={[styles.optionKey, selected && styles.optionKeySelected]}>
                     <Text style={[styles.optionKeyText, selected && styles.optionKeyTextSelected]}>{letter}</Text>
                   </View>
@@ -260,11 +330,12 @@ export default function NouvelleSessionScreen() {
           </View>
         ) : isOpen ? (
           <TextInput
-            style={styles.openInput}
-            placeholder="Saisis ta réponse…"
+            style={[styles.openInput, locked && styles.lockedBlock]}
+            placeholder={locked ? 'Temps écoulé' : 'Saisis ta réponse…'}
             placeholderTextColor={colors.textLight}
             value={currentAnswer ?? ''}
             onChangeText={handleAnswer}
+            editable={!locked}
             multiline
             textAlignVertical="top"
           />
@@ -426,8 +497,17 @@ const styles = StyleSheet.create({
   qHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   qNumber: { fontSize: 14, fontWeight: '800', color: colors.primary },
   qTotal: { color: colors.textLight, fontWeight: '700' },
+  qHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  qTimer: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surfaceAlt, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border },
+  qTimerUrgent: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  qTimerExpired: { backgroundColor: '#FEF2F2', borderColor: '#FCA5A5' },
+  qTimerDone: { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' },
+  qTimerText: { fontSize: 12.5, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] },
   pointsBadge: { backgroundColor: colors.primaryLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.sm },
   pointsText: { fontSize: 12, fontWeight: '800', color: colors.primary },
+  expiredBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', borderRadius: radius.md, padding: 12, marginBottom: 16 },
+  expiredText: { flex: 1, fontSize: 13, fontWeight: '700', color: colors.danger },
+  lockedBlock: { opacity: 0.45 },
   enonce: { fontSize: 19, fontWeight: '700', color: colors.text, lineHeight: 28, marginBottom: 24 },
 
   optionsContainer: { gap: 10 },

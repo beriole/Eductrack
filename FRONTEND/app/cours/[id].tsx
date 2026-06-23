@@ -114,9 +114,10 @@ export default function CoursDetailScreen() {
           </View>
         ) : null}
 
-        {/* Contenu */}
+        {/* Contenu (rendu Markdown léger : titres, listes, gras) */}
         <View style={styles.contenuBox}>
-          <Text style={styles.contenuText}>{cours.contenu ?? 'Contenu non disponible.'}</Text>
+          {cours.contenu ? <CourseBody contenu={cours.contenu} color={color} />
+            : <Text style={styles.para}>Contenu non disponible.</Text>}
         </View>
 
         {/* Avis & favori */}
@@ -133,6 +134,52 @@ export default function CoursDetailScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
+  );
+}
+
+// Rendu inline du gras **texte**.
+function renderInline(text: string, keyBase: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((p, i) =>
+    p.startsWith('**') && p.endsWith('**')
+      ? <Text key={`${keyBase}-${i}`} style={styles.bold}>{p.slice(2, -2)}</Text>
+      : <Text key={`${keyBase}-${i}`}>{p}</Text>
+  );
+}
+
+// Rendu Markdown minimal (titres #/##/###, listes -/•/1., gras) sans dépendance.
+function CourseBody({ contenu, color }: { contenu: string; color: string }) {
+  const lines = contenu.replace(/\r/g, '').split('\n');
+  return (
+    <>
+      {lines.map((raw, idx) => {
+        const line = raw.trim();
+        const key = `l-${idx}`;
+        if (!line) return <View key={key} style={{ height: 10 }} />;
+        if (line.startsWith('### ')) return <Text key={key} style={styles.h3}>{renderInline(line.slice(4), key)}</Text>;
+        if (line.startsWith('## ')) return (
+          <View key={key} style={styles.h2Row}>
+            <View style={[styles.h2Bar, { backgroundColor: color }]} />
+            <Text style={styles.h2}>{renderInline(line.slice(3), key)}</Text>
+          </View>
+        );
+        if (line.startsWith('# ')) return <Text key={key} style={styles.h1}>{renderInline(line.slice(2), key)}</Text>;
+        const bullet = line.match(/^[-•*]\s+(.*)/);
+        if (bullet) return (
+          <View key={key} style={styles.bulletRow}>
+            <View style={[styles.bulletDot, { backgroundColor: color }]} />
+            <Text style={styles.bulletText}>{renderInline(bullet[1], key)}</Text>
+          </View>
+        );
+        const num = line.match(/^(\d+)[.)]\s+(.*)/);
+        if (num) return (
+          <View key={key} style={styles.bulletRow}>
+            <Text style={[styles.numDot, { color }]}>{num[1]}.</Text>
+            <Text style={styles.bulletText}>{renderInline(num[2], key)}</Text>
+          </View>
+        );
+        return <Text key={key} style={styles.para}>{renderInline(line, key)}</Text>;
+      })}
+    </>
   );
 }
 
@@ -164,5 +211,15 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md, backgroundColor: colors.surface, borderRadius: radius.lg,
     padding: spacing.lg, borderWidth: 1, borderColor: colors.border, ...shadow.sm,
   },
-  contenuText: { fontSize: 16, color: colors.text, lineHeight: 28 },
+  para: { fontSize: 16, color: colors.text, lineHeight: 27, marginBottom: 2 },
+  bold: { fontWeight: '800', color: colors.text },
+  h1: { fontSize: 22, fontWeight: '900', color: colors.text, letterSpacing: -0.4, marginTop: 6, marginBottom: 10 },
+  h2Row: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 18, marginBottom: 10 },
+  h2Bar: { width: 4, height: 20, borderRadius: 2 },
+  h2: { flex: 1, fontSize: 18, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+  h3: { fontSize: 16, fontWeight: '800', color: colors.text, marginTop: 12, marginBottom: 6 },
+  bulletRow: { flexDirection: 'row', gap: 10, marginBottom: 8, paddingLeft: 2 },
+  bulletDot: { width: 7, height: 7, borderRadius: 4, marginTop: 8 },
+  numDot: { fontSize: 15, fontWeight: '900', marginTop: 1, minWidth: 20 },
+  bulletText: { flex: 1, fontSize: 15.5, color: colors.text, lineHeight: 24 },
 });
