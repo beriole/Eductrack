@@ -15,6 +15,13 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Upload de fichier : on RETIRE le Content-Type pour laisser React Native
+  // poser « multipart/form-data; boundary=… ». Sans cela (Content-Type fixé à
+  // la main), la frontière manque et le serveur ne lit ni le fichier ni les
+  // champs → l'import PDF et l'upload d'avatar échouent silencieusement.
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    if (config.headers) delete (config.headers as any)['Content-Type'];
+  }
   return config;
 });
 

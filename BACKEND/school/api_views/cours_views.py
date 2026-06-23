@@ -88,28 +88,46 @@ class CoursDetailView(generics.RetrieveUpdateDestroyAPIView):
             raise PermissionDenied("Un cours publié ne peut pas être supprimé.")
         instance.delete()
 
-class CoursSoumettreView(APIView):
+class CoursPublierView(APIView):
+    """Publication directe par l'enseignant — sans validation administrateur.
+
+    L'enseignant est responsable de son contenu : un brouillon (ou un cours en
+    révision) passe immédiatement en `publie` et devient visible des élèves de
+    la classe ciblée.
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, id_cours):
         try:
             cours = Cours.objects.get(id_cours=id_cours)
-            if str(cours.id_enseignant.id_utilisateur) != str(request.user.id_utilisateur):
-                return Response({"error": "Vous n'êtes pas l'auteur de ce cours."}, status=status.HTTP_403_FORBIDDEN)
-            
-            if cours.statut != 'brouillon':
-                return Response({"error": "Seuls les brouillons peuvent être soumis."}, status=status.HTTP_400_BAD_REQUEST)
-            
-            cours.statut = 'en_revision'
-            cours.save(update_fields=['statut'])
-
-            # Send Email notification asynchronously
-            send_email_async(
-                subject=f"Nouveau cours soumis pour révision : {cours.titre}",
-                message=f"L'enseignant {cours.id_enseignant.nom} a soumis le cours '{cours.titre}' pour révision.",
-                recipient_list=[settings.EMAIL_HOST_USER] # Simulate sending to admin
-            )
-
-            return Response({"message": "Cours soumis pour révision avec succès."}, status=status.HTTP_200_OK)
         except Cours.DoesNotExist:
             return Response({"error": "Cours introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        if str(cours.id_enseignant.id_utilisateur) != str(request.user.id_utilisateur):
+            return Response({"error": "Vous n'êtes pas l'auteur de ce cours."}, status=status.HTTP_403_FORBIDDEN)
+        if cours.statut == 'publie':
+            return Response({"error": "Ce cours est déjà publié."}, status=status.HTTP_400_BAD_REQUEST)
+
+        cours.statut = 'publie'
+        cours.valide = True
+        cours.save(update_fields=['statut', 'valide'])
+        return Response({"message": "Cours publié.", "statut": cours.statut}, status=status.HTTP_200_OK)
+
+
+class CoursDepublierView(APIView):
+    """Repasse un cours publié en brouillon pour le modifier à nouveau."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, id_cours):
+        try:
+            cours = Cours.objects.get(id_cours=id_cours)
+        except Cours.DoesNotExist:
+            return Response({"error": "Cours introuvable."}, status=status.HTTP_404_NOT_FOUND)
+        if str(cours.id_enseignant.id_utilisateur) != str(request.user.id_utilisateur):
+            return Response({"error": "Vous n'êtes pas l'auteur de ce cours."}, status=status.HTTP_403_FORBIDDEN)
+        cours.statut = 'brouillon'
+        cours.save(update_fields=['statut'])
+        return Response({"message": "Cours repassé en brouillon.", "statut": cours.statut}, status=status.HTTP_200_OK)
+
+
+# Compat : ancien flux « soumettre » → publie désormais directement.
+CoursSoumettreView = CoursPublierView

@@ -45,23 +45,33 @@ export default function EditCoursScreen() {
     }
   };
 
-  const soumettre = () => {
-    Alert.alert('Soumettre pour publication', 'Le cours sera envoyé en révision avant publication. Continuer ?', [
+  const publier = () => {
+    Alert.alert('Publier le cours', 'Le cours sera immédiatement visible par les élèves de la classe ciblée. Continuer ?', [
       { text: 'Annuler', style: 'cancel' },
       {
-        text: 'Soumettre',
+        text: 'Publier',
         onPress: async () => {
           setBusy(true);
           try {
-            await api.post(`/cours/${id}/soumettre/`);
-            setCours((c: any) => ({ ...c, statut: 'en_revision' }));
-            Alert.alert('Soumis', 'Ton cours est en cours de révision.');
+            await api.post(`/cours/${id}/publier/`);
+            setCours((c: any) => ({ ...c, statut: 'publie' }));
+            Alert.alert('Publié', 'Ton cours est en ligne pour les élèves. 🎉');
           } catch (e: any) {
-            Alert.alert('Erreur', e?.response?.data?.error ?? 'La soumission a échoué.');
+            Alert.alert('Erreur', e?.response?.data?.error ?? 'La publication a échoué.');
           } finally { setBusy(false); }
         },
       },
     ]);
+  };
+
+  const repasserBrouillon = async () => {
+    setBusy(true);
+    try {
+      await api.post(`/cours/${id}/depublier/`);
+      setCours((c: any) => ({ ...c, statut: 'brouillon' }));
+    } catch (e: any) {
+      Alert.alert('Erreur', e?.response?.data?.error ?? 'Action impossible.');
+    } finally { setBusy(false); }
   };
 
   const supprimer = () => {
@@ -135,10 +145,16 @@ export default function EditCoursScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
-          {editable && (
-            <TouchableOpacity style={[styles.actionBtn, styles.submitBtn]} onPress={soumettre} disabled={busy} activeOpacity={0.85}>
+          {cours.statut !== 'publie' && (
+            <TouchableOpacity style={[styles.actionBtn, styles.submitBtn]} onPress={publier} disabled={busy} activeOpacity={0.85}>
               {busy ? <ActivityIndicator size="small" color={colors.white} />
-                : <><Ionicons name="paper-plane-outline" size={17} color={colors.white} /><Text style={styles.submitBtnText}>Soumettre pour publication</Text></>}
+                : <><Ionicons name="cloud-upload-outline" size={17} color={colors.white} /><Text style={styles.submitBtnText}>Publier le cours</Text></>}
+            </TouchableOpacity>
+          )}
+          {cours.statut === 'publie' && (
+            <TouchableOpacity style={[styles.actionBtn, styles.editBtn]} onPress={repasserBrouillon} disabled={busy} activeOpacity={0.85}>
+              <Ionicons name="create-outline" size={17} color={colors.primary} />
+              <Text style={styles.editBtnText}>Repasser en brouillon (modifier)</Text>
             </TouchableOpacity>
           )}
           {cours.statut !== 'publie' && (
@@ -173,6 +189,8 @@ const styles = StyleSheet.create({
   actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: radius.md, paddingVertical: 14 },
   submitBtn: { backgroundColor: colors.primary, ...shadow.md },
   submitBtnText: { color: colors.white, fontWeight: '800', fontSize: 15 },
+  editBtn: { backgroundColor: colors.primaryLight, borderWidth: 1.5, borderColor: colors.primary },
+  editBtnText: { color: colors.primary, fontWeight: '800', fontSize: 15 },
   deleteBtn: { backgroundColor: '#FEF2F2', borderWidth: 1.5, borderColor: '#FCA5A5' },
   deleteBtnText: { color: colors.danger, fontWeight: '800', fontSize: 15 },
 });

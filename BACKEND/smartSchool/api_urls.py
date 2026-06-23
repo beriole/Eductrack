@@ -11,7 +11,9 @@ from school.api_views.user_views import UserMeView, UserAvatarUploadView, PushTo
 from school.api_views.parent_views import LierEnfantView, EnfantsListView, EnfantSuiviView, LienParentEleveDetailView, RapportParentalListView, RapportParentalGenerateView, RapportPDFView
 from school.api_views.liaison_views import CodeLiaisonRegenerateView, CodeLiaisonCurrentView, EleveParentsListView, EleveRevokeParentView
 from school.api_views.matiere_views import MatiereListView
-from school.api_views.cours_views import CoursListView, CoursDetailView, CoursSoumettreView
+from school.api_views.cours_views import (
+    CoursListView, CoursDetailView, CoursSoumettreView, CoursPublierView, CoursDepublierView,
+)
 from school.api_views.epreuve_views import EpreuveListView, EpreuveDetailView, EpreuveQuestionsView
 from school.api_views.assistant_views import QuestionAssistantView
 from school.api_views.exercice_views import ExerciceGenererView
@@ -105,6 +107,8 @@ urlpatterns = [
     path('cours/', CoursListView.as_view(), name='api-cours-list'),
     path('cours/<uuid:id_cours>/', CoursDetailView.as_view(), name='api-cours-detail'),
     path('cours/<uuid:id_cours>/soumettre/', CoursSoumettreView.as_view(), name='api-cours-soumettre'),
+    path('cours/<uuid:id_cours>/publier/', CoursPublierView.as_view(), name='api-cours-publier'),
+    path('cours/<uuid:id_cours>/depublier/', CoursDepublierView.as_view(), name='api-cours-depublier'),
 
     # ── Épreuves ──────────────────────────────────────────────────────────────
     path('epreuves/', EpreuveListView.as_view(), name='api-epreuves-list'),
