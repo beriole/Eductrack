@@ -56,13 +56,25 @@ NIVEAU_GUIDE = {
 
 # ─── Sélection / génération des questions ────────────────────────────────────
 
+def _lacunes_a_reviser(eleve, limite=3):
+    """Lacunes à réviser en priorité : d'abord celles DUES (répétition espacée),
+    sinon les moins maîtrisées. Renvoie une liste d'objets Lacunes."""
+    from django.db.models import Q
+    today = timezone.localdate()
+    base = Lacunes.objects.filter(
+        id_eleve=eleve, statut__in=('detectee', 'en_cours')
+    ).select_related('id_matiere')
+    dues = list(base.filter(
+        Q(prochaine_revision__isnull=True) | Q(prochaine_revision__lte=today)
+    ).order_by('prochaine_revision', 'taux_maitrise')[:limite])
+    if dues:
+        return dues
+    return list(base.order_by('taux_maitrise')[:limite])
+
+
 def _notions_faibles(eleve):
     """Renvoie jusqu'à 3 (matiere, notion) où l'élève a des lacunes."""
-    lacunes = (
-        Lacunes.objects.filter(id_eleve=eleve, statut__in=('detectee', 'en_cours'))
-        .select_related('id_matiere').order_by('taux_maitrise')[:3]
-    )
-    return [(l.id_matiere, l.notion) for l in lacunes]
+    return [(l.id_matiere, l.notion) for l in _lacunes_a_reviser(eleve)]
 
 
 def _matiere_par_defaut(eleve):
@@ -339,6 +351,13 @@ class RevisionCompleterView(APIView):
             revision.completee = True
             revision.date_completion = timezone.now()
             revision.save(update_fields=['completee', 'note', 'date_completion'])
+
+            # Apprentissage adaptatif : replanifie les notions révisées (SM-2)
+            # selon la performance de l'élève sur cette session.
+            from school.adaptive import appliquer_sm2, note_vers_qualite
+            qualite = note_vers_qualite(revision.note)
+            for lacune in _lacunes_a_reviser(eleve):
+                appliquer_sm2(lacune, qualite, today=jour)
 
         return Response({
             "completee": True,

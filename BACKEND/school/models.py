@@ -468,6 +468,15 @@ class Lacunes(models.Model):
     taux_maitrise = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, validators=[MinValueValidator(0), MaxValueValidator(100)])
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='detectee')
     nb_exercices_faits = models.PositiveSmallIntegerField(default=0)
+    # Répétition espacée (algorithme SM-2) : planifie la prochaine révision de la
+    # notion selon la performance, pour un vrai apprentissage adaptatif.
+    facilite = models.DecimalField(max_digits=4, decimal_places=2, default=2.5,
+                                   help_text="Facteur de facilité SM-2 (>= 1.3).")
+    repetitions = models.PositiveSmallIntegerField(default=0,
+                                   help_text="Nb de révisions réussies consécutives.")
+    intervalle_jours = models.PositiveSmallIntegerField(default=0)
+    prochaine_revision = models.DateField(null=True, blank=True,
+                                   help_text="Date à laquelle la notion doit être revue.")
     date_detection = models.DateTimeField(auto_now_add=True)
     date_maitrise = models.DateTimeField(blank=True, null=True)
 
