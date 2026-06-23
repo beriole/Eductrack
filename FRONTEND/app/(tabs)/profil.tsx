@@ -393,10 +393,10 @@ const styles = StyleSheet.create({
   editChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primaryLight, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.full },
   editLink: { fontSize: 12.5, color: colors.primary, fontWeight: '800' },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 16 },
-  tile: { width: '25%', alignItems: 'center' },
-  tileIcon: { width: 50, height: 50, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
-  tileLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600', textAlign: 'center' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
+  tile: { width: '23%', alignItems: 'center', backgroundColor: colors.surfaceAlt, borderRadius: radius.md, paddingVertical: 12, paddingHorizontal: 4, borderWidth: 1, borderColor: colors.border },
+  tileIcon: { width: 44, height: 44, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+  tileLabel: { fontSize: 10.5, color: colors.textMuted, fontWeight: '700', textAlign: 'center' },
 
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.surfaceAlt },
   infoIcon: { width: 30, height: 30, borderRadius: 9, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },

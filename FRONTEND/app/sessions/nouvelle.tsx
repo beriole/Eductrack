@@ -31,9 +31,13 @@ const VF_OPTIONS = [
 // Temps accordé par question (secondes), selon le type. Passé ce délai, la
 // question se verrouille et ses points sont perdus.
 const TEMPS_PAR_TYPE: Record<string, number> = {
-  qcm: 45, vrai_faux: 30, reponse_courte: 90, redaction: 180,
+  qcm: 30, vrai_faux: 30, reponse_courte: 90, redaction: 180,
 };
-const budgetQuestion = (q: Question) => (TEMPS_PAR_TYPE[q.type_question] ?? 45) * Math.max(1, q.points || 1);
+const budgetQuestion = (q: Question) => {
+  // QCM et Vrai/Faux : 30 s max, sans dépendre du barème.
+  if (q.type_question === 'qcm' || q.type_question === 'vrai_faux') return 30;
+  return (TEMPS_PAR_TYPE[q.type_question] ?? 45) * Math.max(1, q.points || 1);
+};
 
 export default function NouvelleSessionScreen() {
   const { epreuveId, mode = 'exercice', duree, revision } = useLocalSearchParams<{ epreuveId: string; mode?: string; duree?: string; revision?: string }>();

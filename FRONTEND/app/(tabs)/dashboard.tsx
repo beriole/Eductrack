@@ -10,6 +10,7 @@ import { useI18n } from '@/src/i18n/useI18n';
 import { colors, radius, shadow } from '@/src/theme';
 import { api, BASE_URL } from '@/src/lib/api';
 import { TeacherHome } from '@/src/components/TeacherHome';
+import { GradientBox } from '@/src/components/GradientBox';
 
 // Les avatars uploadés sont servis en chemin relatif (/media/…) → on préfixe.
 const MEDIA_ORIGIN = BASE_URL.replace(/\/api\/v1\/?$/, '');
@@ -128,7 +129,7 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity style={styles.searchChip} onPress={() => router.push('/recherche' as any)}>
-              <Ionicons name="search" size={18} color={colors.primary} />
+              <Ionicons name="search" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         }
@@ -282,7 +283,7 @@ function Header({ prenom, subtitle, right, avatarUrl }: { prenom?: string; subti
   const h = new Date().getHours();
   const salut = h < 5 ? 'Bonne nuit' : h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
   return (
-    <View style={styles.header}>
+    <GradientBox colors={colors.gradientPrimary} style={styles.header}>
       {uri
         ? <Image source={{ uri }} style={styles.avatar} />
         : <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>}
@@ -292,9 +293,9 @@ function Header({ prenom, subtitle, right, avatarUrl }: { prenom?: string; subti
       </View>
       {right}
       <TouchableOpacity style={styles.bell} onPress={() => router.push('/notifications')} activeOpacity={0.7}>
-        <Ionicons name="notifications-outline" size={20} color={colors.text} />
+        <Ionicons name="notifications-outline" size={20} color="#fff" />
       </TouchableOpacity>
-    </View>
+    </GradientBox>
   );
 }
 
@@ -356,18 +357,18 @@ function Section({ title, accent, onMore, children }: { title: string; accent?: 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  scroll: { paddingTop: 56, paddingBottom: 16 },
+  scroll: { paddingBottom: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
 
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, marginBottom: 18 },
-  avatar: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', ...shadow.md },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 20, marginBottom: 18, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
+  avatar: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.white, fontSize: 18, fontWeight: '800' },
-  bell: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', ...shadow.sm },
-  greeting: { fontSize: 19, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
-  subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 1 },
+  bell: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  greeting: { fontSize: 19, fontWeight: '800', color: '#fff', letterSpacing: -0.3 },
+  subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 1 },
   verifyChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.full },
   verifyChipText: { fontSize: 11, fontWeight: '700', color: '#92400E' },
-  searchChip: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  searchChip: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
 
   streakChip: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginHorizontal: 20, backgroundColor: '#FFF7ED', borderWidth: 1, borderColor: '#FED7AA', paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.full, marginBottom: 16 },
   streakText: { fontSize: 13, fontWeight: '700', color: '#9A3412' },
