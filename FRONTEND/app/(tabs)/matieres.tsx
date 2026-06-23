@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/lib/api';
 import { useAuthStore } from '@/src/store/authStore';
 import { SubjectGrid, SubjectEntry } from '@/src/components/SubjectGrid';
+import { SkeletonList } from '@/src/components/Skeleton';
 import { colors, radius, spacing, shadow } from '@/src/theme';
 
 interface Cours {
@@ -78,7 +79,7 @@ export default function MatieresScreen() {
   );
 
   if (loading) {
-    return <View style={styles.centered}><ActivityIndicator size="large" color={colors.primary} /></View>;
+    return <View style={styles.container}><SkeletonList count={6} /></View>;
   }
 
   return (

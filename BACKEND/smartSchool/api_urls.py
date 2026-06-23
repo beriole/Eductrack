@@ -11,6 +11,7 @@ from school.api_views.user_views import UserMeView, UserAvatarUploadView, PushTo
 from school.api_views.parent_views import LierEnfantView, EnfantsListView, EnfantSuiviView, LienParentEleveDetailView, RapportParentalListView, RapportParentalGenerateView, RapportPDFView
 from school.api_views.liaison_views import CodeLiaisonRegenerateView, CodeLiaisonCurrentView, EleveParentsListView, EleveRevokeParentView
 from school.api_views.matiere_views import MatiereListView
+from school.api_views.search_views import RechercheGlobaleView
 from school.api_views.cours_views import (
     CoursListView, CoursDetailView, CoursSoumettreView, CoursPublierView, CoursDepublierView,
 )
@@ -102,6 +103,7 @@ urlpatterns = [
 
     # ── Matières ──────────────────────────────────────────────────────────────
     path('matieres/', MatiereListView.as_view(), name='api-matieres-list'),
+    path('recherche/', RechercheGlobaleView.as_view(), name='api-recherche'),
 
     # ── Cours ─────────────────────────────────────────────────────────────────
     path('cours/', CoursListView.as_view(), name='api-cours-list'),

@@ -113,12 +113,19 @@ export default function DashboardScreen() {
       <Header
         prenom={user?.prenom}
         subtitle={t('dashboard.subtitle')}
-        right={!user?.email_verifie ? (
-          <TouchableOpacity style={styles.verifyChip} onPress={() => router.push('/verify-email')}>
-            <Ionicons name="warning-outline" size={13} color={colors.warning} />
-            <Text style={styles.verifyChipText}>Vérifier l'email</Text>
-          </TouchableOpacity>
-        ) : null}
+        right={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {!user?.email_verifie ? (
+              <TouchableOpacity style={styles.verifyChip} onPress={() => router.push('/verify-email')}>
+                <Ionicons name="warning-outline" size={13} color={colors.warning} />
+                <Text style={styles.verifyChipText}>Vérifier l'email</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity style={styles.searchChip} onPress={() => router.push('/recherche' as any)}>
+              <Ionicons name="search" size={18} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        }
       />
 
       {/* Streak */}
@@ -351,6 +358,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 1 },
   verifyChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.full },
   verifyChipText: { fontSize: 11, fontWeight: '700', color: '#92400E' },
+  searchChip: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
 
   streakChip: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginHorizontal: 20, backgroundColor: '#FFF7ED', borderWidth: 1, borderColor: '#FED7AA', paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.full, marginBottom: 16 },
   streakText: { fontSize: 13, fontWeight: '700', color: '#9A3412' },
