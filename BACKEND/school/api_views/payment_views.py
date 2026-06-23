@@ -56,6 +56,47 @@ def _check_fapshi_status(trans_id: str) -> dict:
     return resp.json()
 
 
+def _activer_abonnement(paiement):
+    """Confirme un paiement et active l'abonnement lié (sans intervention admin)."""
+    paiement.statut = 'confirme'
+    paiement.date_confirmation = timezone.now()
+    paiement.save(update_fields=['statut', 'date_confirmation'])
+    abonnement = paiement.id_abonnement
+    abonnement.statut = 'actif'
+    abonnement.save(update_fields=['statut'])
+    return abonnement
+
+
+def _appliquer_statut_fapshi(paiement, fapshi_status):
+    """Applique le statut Fapshi au paiement. Renvoie le statut normalisé."""
+    st = (fapshi_status or '').lower()
+    if st in ('successful', 'success') and paiement.statut != 'confirme':
+        _activer_abonnement(paiement)
+        return 'confirme'
+    if st in ('failed', 'expired') and paiement.statut == 'en_attente':
+        paiement.statut = 'echoue'
+        paiement.save(update_fields=['statut'])
+        return 'echoue'
+    return paiement.statut
+
+
+def _creer_abonnement_en_attente(user, formule, periodicite, montant, reference, meta):
+    """Crée l'abonnement (suspendu) + le paiement (en attente) avant confirmation."""
+    now = timezone.now().date()
+    durees = {'mensuel': 30, 'trimestriel': 90, 'annuel': 365}
+    abonnement = Abonnements.objects.create(
+        id_utilisateur=user, formule=formule, montant=montant, periodicite=periodicite,
+        date_debut=now, date_expiration=now + datetime.timedelta(days=durees[periodicite]),
+        statut='suspendu',
+    )
+    paiement = Paiements.objects.create(
+        id_abonnement=abonnement, id_utilisateur=user, montant=montant,
+        methode_paiement='mtn_momo', reference_transaction=reference,
+        statut='en_attente', metadata=meta,
+    )
+    return abonnement, paiement
+
+
 class PaiementInitierView(APIView):
     """Initie un paiement Fapshi (MTN MoMo / Orange Money) pour un abonnement."""
     permission_classes = [IsAuthenticated]
@@ -83,13 +124,15 @@ class PaiementInitierView(APIView):
 
         fapshi_mode = getattr(settings, 'FAPSHI_API_USER', '') != ''
         if not fapshi_mode:
-            # Mode test : simuler une transaction
+            # Mode démo (aucune clé Fapshi) : on crée l'abonnement en attente avec
+            # une référence TEST- ; il sera activé automatiquement à la vérification.
+            ref = f"TEST-{reference}"
+            _creer_abonnement_en_attente(
+                request.user, formule, periodicite, montant, ref,
+                {'demo': True, 'formule': formule, 'periodicite': periodicite})
             return Response({
-                "trans_id": f"TEST-{reference}",
-                "link": "https://example.com/pay",
-                "montant": montant,
-                "reference": reference,
-                "message": "Mode test activé — aucun paiement réel.",
+                "trans_id": ref, "link": None, "montant": montant, "reference": reference,
+                "message": "Mode démo — la vérification activera l'abonnement.",
             }, status=status.HTTP_200_OK)
 
         try:
@@ -98,33 +141,13 @@ class PaiementInitierView(APIView):
             logger.error("Fapshi initiation error: %s", exc)
             return Response({"error": "Erreur de connexion au service de paiement."}, status=status.HTTP_502_BAD_GATEWAY)
 
-        # Enregistrer le paiement en attente
-        now = timezone.now().date()
-        durees = {'mensuel': 30, 'trimestriel': 90, 'annuel': 365}
-        expiration = now + datetime.timedelta(days=durees[periodicite])
-
-        abonnement = Abonnements.objects.create(
-            id_utilisateur=request.user,
-            formule=formule,
-            montant=montant,
-            periodicite=periodicite,
-            date_debut=now,
-            date_expiration=expiration,
-            statut='suspendu',
-        )
-
-        Paiements.objects.create(
-            id_abonnement=abonnement,
-            id_utilisateur=request.user,
-            montant=montant,
-            methode_paiement='mtn_momo',
-            reference_transaction=result.get('transId', reference),
-            statut='en_attente',
-            metadata={'fapshi': result, 'formule': formule, 'periodicite': periodicite},
-        )
+        ref = result.get('transId', reference)
+        _creer_abonnement_en_attente(
+            request.user, formule, periodicite, montant, ref,
+            {'fapshi': result, 'formule': formule, 'periodicite': periodicite})
 
         return Response({
-            "trans_id": result.get('transId'),
+            "trans_id": ref,
             "link": result.get('link'),
             "montant": montant,
             "reference": reference,
@@ -147,30 +170,48 @@ class PaiementStatutView(APIView):
         if paiement.statut == 'confirme':
             return Response({"statut": "confirme", "abonnement": AbonnementSerializer(paiement.id_abonnement).data})
 
+        # Mode démo : référence TEST- → activation immédiate (aucun paiement réel).
+        if trans_id.startswith('TEST-'):
+            abonnement = _activer_abonnement(paiement)
+            return Response({"statut": "confirme", "abonnement": AbonnementSerializer(abonnement).data})
+
         try:
             result = _check_fapshi_status(trans_id)
         except requests.RequestException as exc:
             logger.error("Fapshi status error: %s", exc)
             return Response({"error": "Impossible de vérifier le statut."}, status=status.HTTP_502_BAD_GATEWAY)
 
-        fapshi_status = result.get('status', '').lower()
+        statut = _appliquer_statut_fapshi(paiement, result.get('status', ''))
+        if statut == 'confirme':
+            return Response({"statut": "confirme", "abonnement": AbonnementSerializer(paiement.id_abonnement).data})
+        return Response({"statut": statut or "en_attente"})
 
-        if fapshi_status in ('successful', 'success'):
-            paiement.statut = 'confirme'
-            paiement.date_confirmation = timezone.now()
-            paiement.save(update_fields=['statut', 'date_confirmation'])
 
-            abonnement = paiement.id_abonnement
-            abonnement.statut = 'actif'
-            abonnement.save(update_fields=['statut'])
+class FapshiWebhookView(APIView):
+    """POST /paiements/webhook/fapshi/ — notification serveur de Fapshi.
 
-            return Response({"statut": "confirme", "abonnement": AbonnementSerializer(abonnement).data})
+    Active l'abonnement dès la confirmation, SANS validation administrateur.
+    On revérifie systématiquement le statut auprès de Fapshi (on ne fait pas
+    confiance au seul corps de la requête)."""
+    permission_classes = [AllowAny]
 
-        if fapshi_status in ('failed', 'expired'):
-            paiement.statut = 'echoue'
-            paiement.save(update_fields=['statut'])
-
-        return Response({"statut": fapshi_status or "en_attente"})
+    def post(self, request):
+        trans_id = request.data.get('transId') or request.data.get('transactionId') or ''
+        if not trans_id:
+            return Response({"error": "transId manquant."}, status=status.HTTP_400_BAD_REQUEST)
+        paiement = Paiements.objects.select_related('id_abonnement').filter(
+            reference_transaction=trans_id).first()
+        if not paiement:
+            return Response({"message": "Inconnu, ignoré."}, status=status.HTTP_200_OK)
+        if paiement.statut == 'confirme':
+            return Response({"statut": "confirme"}, status=status.HTTP_200_OK)
+        try:
+            result = _check_fapshi_status(trans_id)
+        except requests.RequestException:
+            # On acquitte quand même : Fapshi réessaiera, ou le polling prendra le relais.
+            return Response({"statut": "en_attente"}, status=status.HTTP_200_OK)
+        statut = _appliquer_statut_fapshi(paiement, result.get('status', ''))
+        return Response({"statut": statut}, status=status.HTTP_200_OK)
 
 
 class AbonnementListView(generics.ListAPIView):

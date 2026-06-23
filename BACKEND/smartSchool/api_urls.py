@@ -30,7 +30,7 @@ from school.api_views.session_views import SessionDemarrerView, SessionReponsesV
 from school.api_views.notification_views import NotificationListView, NotificationMarkReadView, NotificationMarkAllReadView, NotificationCountView
 from school.api_views.chatbot_views import ChatbotMessageView, ChatbotHistoriqueView
 from school.api_views.focus_views import FocusStartView, FocusStopView, FocusListView
-from school.api_views.payment_views import PaiementInitierView, PaiementStatutView, AbonnementListView, AbonnementActifView
+from school.api_views.payment_views import PaiementInitierView, PaiementStatutView, AbonnementListView, AbonnementActifView, FapshiWebhookView
 from school.api_views.planning_views import PlanningCreateView, PlanningActifView, PlanningListView, SessionEtudeCompleterView
 from school.api_views.orientation_views import (
     OrientationCreateView, OrientationListView, OrientationTestView, OrientationSoumettreView,
@@ -178,6 +178,7 @@ urlpatterns = [
 
     # ── Paiements & Abonnements ───────────────────────────────────────────────
     path('paiements/initier/', PaiementInitierView.as_view(), name='api-paiements-initier'),
+    path('paiements/webhook/fapshi/', FapshiWebhookView.as_view(), name='api-paiements-webhook-fapshi'),
     path('paiements/<str:trans_id>/statut/', PaiementStatutView.as_view(), name='api-paiements-statut'),
     path('abonnements/', AbonnementListView.as_view(), name='api-abonnements-list'),
     path('abonnements/actif/', AbonnementActifView.as_view(), name='api-abonnements-actif'),
