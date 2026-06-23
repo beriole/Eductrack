@@ -195,7 +195,10 @@ class EpreuveSerializer(FeedbackFieldsMixin, serializers.ModelSerializer):
         """Anti-triche : le corrigé (texte + PDF) n'est exposé que si le contexte
         l'autorise (propriétaire enseignant, ou élève après composition)."""
         data = super().to_representation(instance)
-        if not self.context.get('reveler_corrige'):
+        # Pour un sujet PDF sans questions (annale + corrigé importés), il n'y a
+        # rien à « tricher » : le corrigé est consultable directement.
+        reveler = self.context.get('reveler_corrige') or instance.questions.count() == 0
+        if not reveler:
             data.pop('corrige', None)
             data.pop('corrige_pdf', None)
         return data

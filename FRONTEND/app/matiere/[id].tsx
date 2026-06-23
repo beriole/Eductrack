@@ -19,7 +19,8 @@ interface Cours {
 interface Epreuve {
   id_epreuve: string; titre: string; type_epreuve: string; niveau: string; serie: string | null;
   annee: number | null; duree_minutes: number; nb_questions_detail: number;
-  fichier_pdf?: string | null; note_moyenne?: number | null; nb_avis?: number; est_favori?: boolean;
+  fichier_pdf?: string | null; corrige_pdf?: string | null;
+  note_moyenne?: number | null; nb_avis?: number; est_favori?: boolean;
 }
 
 const TYPE_META: Record<string, { label: string; color: string; icon: IconName }> = {
@@ -192,31 +193,43 @@ export default function MatiereContenuScreen() {
               </TouchableOpacity>
             </View>
             {selected?.fichier_pdf ? (
-              <View style={{ marginTop: 12, marginBottom: 4 }}>
+              <View style={{ marginTop: 12, marginBottom: 8 }}>
                 <PdfViewButton url={selected.fichier_pdf} label="Consulter le sujet (PDF)" />
               </View>
             ) : null}
-            <Text style={styles.sheetSub}>Choisis ton mode de passage</Text>
-            <TouchableOpacity style={styles.modeCard} activeOpacity={0.85} onPress={() => startSession('exercice')}>
-              <View style={[styles.modeIcon, { backgroundColor: `${colors.emerald}15` }]}>
-                <Ionicons name="barbell-outline" size={22} color={colors.emerald} />
+            {selected?.corrige_pdf ? (
+              <View style={{ marginBottom: 8 }}>
+                <PdfViewButton url={selected.corrige_pdf} label="Voir le corrigé (PDF)" />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modeTitle}>Entraînement</Text>
-                <Text style={styles.modeDesc}>Navigation libre, correction détaillée à la fin.</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.modeCard} activeOpacity={0.85} onPress={() => startSession('examen_blanc')}>
-              <View style={[styles.modeIcon, { backgroundColor: `${colors.violet}15` }]}>
-                <Ionicons name="timer-outline" size={22} color={colors.violet} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modeTitle}>Examen blanc</Text>
-                <Text style={styles.modeDesc}>Conditions réelles : chronomètre strict. {selected?.duree_minutes} min.</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
-            </TouchableOpacity>
+            ) : null}
+
+            {(selected?.nb_questions_detail ?? 0) > 0 ? (
+              <>
+                <Text style={styles.sheetSub}>Choisis ton mode de passage</Text>
+                <TouchableOpacity style={styles.modeCard} activeOpacity={0.85} onPress={() => startSession('exercice')}>
+                  <View style={[styles.modeIcon, { backgroundColor: `${colors.emerald}15` }]}>
+                    <Ionicons name="barbell-outline" size={22} color={colors.emerald} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modeTitle}>Entraînement</Text>
+                    <Text style={styles.modeDesc}>Navigation libre, correction détaillée à la fin.</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modeCard} activeOpacity={0.85} onPress={() => startSession('examen_blanc')}>
+                  <View style={[styles.modeIcon, { backgroundColor: `${colors.violet}15` }]}>
+                    <Ionicons name="timer-outline" size={22} color={colors.violet} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modeTitle}>Examen blanc</Text>
+                    <Text style={styles.modeDesc}>Conditions réelles : chronomètre strict. {selected?.duree_minutes} min.</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <Text style={styles.sheetSub}>Épreuve à consulter en PDF — pas de quiz interactif pour ce sujet.</Text>
+            )}
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setSelected(null)}>
               <Text style={styles.cancelText}>Annuler</Text>
             </TouchableOpacity>

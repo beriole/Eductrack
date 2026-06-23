@@ -202,44 +202,50 @@ class EpreuveImportPDFView(APIView):
         if langue not in ('fr', 'en'):
             langue = 'fr'
 
-        # 1) Extraction du texte
-        try:
-            texte = extraire_texte_pdf(fichier)
-        except ValueError:
-            return Response({"error": "Impossible de lire ce PDF."},
-                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        if not texte:
-            return Response(
-                {"error": "Aucun texte exploitable (PDF scanné/image ?). Un PDF avec texte est requis."},
-                status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        # L'analyse est OPTIONNELLE. Par défaut on tente d'extraire les questions,
+        # mais l'enseignant peut importer le sujet (+ corrigé) sans analyse.
+        analyser = str(request.data.get('analyser', 'true')).lower() not in ('false', '0', 'no')
+        corrige_file = request.FILES.get('corrige_pdf')
 
-        # 2) Structuration : IA puis fallback règles
-        source = 'ia'
+        source = 'aucune'
         questions = []
-        try:
-            brut = ai_service.chat(
-                [{"role": "user", "content": _construire_prompt(texte, langue)}],
-                system=SYSTEM_PROMPT, max_tokens=2500, temperature=0.2,
-            )
-            questions = _normaliser(_extraire_json(brut))
-        except ai_service.AIUnavailable:
-            questions = []
-        except (ValueError, json.JSONDecodeError):
-            logger.warning("Import PDF : JSON IA illisible.")
-            questions = []
+        if analyser:
+            try:
+                texte = extraire_texte_pdf(fichier)
+            except ValueError:
+                texte = ''
+            if texte:
+                source = 'ia'
+                try:
+                    brut = ai_service.chat(
+                        [{"role": "user", "content": _construire_prompt(texte, langue)}],
+                        system=SYSTEM_PROMPT, max_tokens=2500, temperature=0.2,
+                    )
+                    questions = _normaliser(_extraire_json(brut))
+                except ai_service.AIUnavailable:
+                    questions = []
+                except (ValueError, json.JSONDecodeError):
+                    logger.warning("Import PDF : JSON IA illisible.")
+                    questions = []
+                if not questions:
+                    source = 'regles'
+                    questions = parser_par_regles(texte)
+            if not questions:
+                source = 'aucune'  # rien d'exploitable → on garde quand même le PDF
 
-        if not questions:
-            source = 'regles'
-            questions = parser_par_regles(texte)
-
-        if not questions:
-            return Response(
-                {"error": "Aucune question n'a pu être extraite de ce PDF."},
-                status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-
-        # 3) Création de l'épreuve + questions
+        # On enregistre toujours l'épreuve avec le(s) PDF(s) : le sujet reste
+        # consultable même quand l'analyse ne donne aucune question.
+        fichier.seek(0)
         epreuve = self._creer_epreuve(
-            request.data, enseignant, matiere, titre, type_epreuve, niveau, langue, questions)
+            request.data, enseignant, matiere, titre, type_epreuve, niveau, langue,
+            questions, fichier, corrige_file)
+
+        # Notifie les élèves de la classe (best-effort).
+        try:
+            from school.utils import notifier_eleves_nouveau_contenu
+            notifier_eleves_nouveau_contenu(epreuve, 'epreuve')
+        except Exception:
+            pass
 
         data = EpreuveSerializer(epreuve).data
         data['source_extraction'] = source
@@ -247,7 +253,8 @@ class EpreuveImportPDFView(APIView):
         return Response(data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
-    def _creer_epreuve(self, payload, enseignant, matiere, titre, type_epreuve, niveau, langue, questions):
+    def _creer_epreuve(self, payload, enseignant, matiere, titre, type_epreuve, niveau,
+                       langue, questions, fichier=None, corrige_file=None):
         serie = (payload.get('serie') or '').strip() or None
         annee = payload.get('annee')
         try:
@@ -267,19 +274,22 @@ class EpreuveImportPDFView(APIView):
             source=source_doc,
             langue=langue,
             nb_questions=len(questions),
+            fichier_pdf=fichier,
+            corrige_pdf=corrige_file,
             statut='actif',
         )
-        Questions.objects.bulk_create([
-            Questions(
-                id_epreuve=epreuve,
-                numero_ordre=i,
-                enonce=q['enonce'],
-                type_question=q['type_question'],
-                options=q['options'],
-                reponse_correcte=q['reponse_correcte'],
-                points=q['points'],
-                difficulte='moyen',
-            )
-            for i, q in enumerate(questions, start=1)
-        ])
+        if questions:
+            Questions.objects.bulk_create([
+                Questions(
+                    id_epreuve=epreuve,
+                    numero_ordre=i,
+                    enonce=q['enonce'],
+                    type_question=q['type_question'],
+                    options=q['options'],
+                    reponse_correcte=q['reponse_correcte'],
+                    points=q['points'],
+                    difficulte='moyen',
+                )
+                for i, q in enumerate(questions, start=1)
+            ])
         return epreuve
