@@ -15,7 +15,9 @@ export function EpreuveMeta({ value, onChange }: { value: Meta; onChange: (m: Me
     api.get('/matieres/').then((r) => setMatieres(r.data.results ?? r.data)).catch(() => {});
   }, []);
   const set = (patch: Partial<Meta>) => onChange({ ...value, ...patch });
-  const matieresNiveau = matieres.filter((m) => !m.niveaux?.length || m.niveaux.includes(value.niveau));
+  const matieresNiveau = matieres
+    .filter((m) => !m.nom?.includes('déprécié'))
+    .filter((m) => !m.niveaux?.length || m.niveaux.includes(value.niveau));
 
   return (
     <View>

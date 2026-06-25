@@ -54,6 +54,16 @@ export default function NouvelExerciceScreen() {
         <Text style={styles.sectionTitle}>Questions</Text>
         <QuestionBuilder questions={questions} onChange={setQuestions} />
 
+        {!valide && (
+          <Text style={styles.missing}>
+            À compléter : {[
+              meta.titre.trim().length < 3 ? 'titre (≥ 3 caractères)' : null,
+              !meta.id_matiere ? 'matière' : null,
+              !questionsValides(questions) ? 'au moins une question (énoncé + 2 options + bonne réponse cochée)' : null,
+            ].filter(Boolean).join(' · ')}
+          </Text>
+        )}
+
         <TouchableOpacity style={[styles.submit, (!valide || saving) && { opacity: 0.5 }]} onPress={creer} disabled={!valide || saving} activeOpacity={0.85}>
           {saving ? <ActivityIndicator color={colors.white} size="small" />
             : <><Ionicons name="save-outline" size={18} color={colors.white} /><Text style={styles.submitText}>Créer l'exercice</Text></>}
@@ -72,6 +82,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 1 },
   scroll: { padding: spacing.md },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: colors.text, marginTop: 22, marginBottom: 12 },
-  submit: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 15, marginTop: 18, ...shadow.lg },
+  missing: { fontSize: 12.5, color: colors.warning, fontWeight: '700', marginTop: 16, textAlign: 'center', lineHeight: 18 },
+  submit: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 15, marginTop: 10, ...shadow.lg },
   submitText: { color: colors.white, fontWeight: '800', fontSize: 15 },
 });
